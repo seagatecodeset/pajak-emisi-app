@@ -26,9 +26,9 @@ baku_mutu = {
 }
 
 # -------------------------------
-# Nilai Alfa per jenis kendaraan
+# Default Nilai Alfa (editable)
 # -------------------------------
-nilai_alfa = {
+default_alfa = {
     "Motor 2-tak": 0.3,
     "Motor 4-tak": 0.1,
     "Sedan/MPV Euro 2": 0.05,
@@ -56,7 +56,7 @@ nilai_KD = {
 }
 
 # -------------------------------
-# Fungsi: menentukan kategori emisi
+# Fungsi bantu
 # -------------------------------
 def kategori_emisi(jenis):
     if jenis in ["Truk/Bis Euro 2", "Truk/Bis Euro 4", "Niaga Ringan"]:
@@ -70,15 +70,12 @@ def kategori_emisi(jenis):
 # Streamlit UI
 # -------------------------------
 st.title("🚗 Simulasi Pajak Emisi Kendaraan Bermotor")
-st.write("Berdasarkan **Permendagri No. 7 Tahun 2025** & **PERMEN LHK no 8 tahun 2023**")
+st.caption("Berdasarkan **Permendagri No. 7 Tahun 2025** dan **PERMEN LHK no 8 tahun 2023**")
 
 # 1. Jenis Kendaraan
 jenis = st.selectbox(
     "Pilih Jenis Kendaraan:",
-    [
-        "Motor 2-tak", "Motor 4-tak", "Sedan/MPV Euro 2", "Sedan/MPV Euro 4",
-        "SUV/Jeep", "Truk/Bis Euro 2", "Truk/Bis Euro 4", "Niaga Ringan", "CNG"
-    ]
+    list(default_alfa.keys())
 )
 
 # 2. Tahun Kendaraan
@@ -92,7 +89,7 @@ elif tahun <= 2021:
 else:
     periode = ">2021"
 
-# 3. Input hasil uji emisi
+# 3. Hasil Uji Emisi
 kategori = kategori_emisi(jenis)
 st.subheader("Hasil Nilai Ukur Emisi")
 
@@ -104,10 +101,21 @@ else:
     hc = st.number_input("HC (ppm)", min_value=0.0, value=150.0)
     hasil_emisi = {"CO": co, "HC": hc}
 
-# 4. Nilai Jual Kendaraan
+# 4. Nilai Alfa (dapat diedit user)
+st.markdown("### ⚙️ Pengaturan Lanjutan")
+alfa = st.number_input(
+    f"Nilai Alfa (α) untuk {jenis}:",
+    min_value=0.0,
+    max_value=1.0,
+    value=default_alfa[jenis],
+    step=0.01,
+    help="Nilai alfa dapat diubah sesuai kebijakan atau hasil kajian emisi."
+)
+
+# 5. Nilai Jual Kendaraan
 njkb = st.number_input("Nilai Jual Kendaraan Bermotor (Rp):", min_value=0.0, value=150_000_000.0, step=1_000_000.0)
 
-# 5. Tarif Pajak Daerah
+# 6. Tarif Pajak Daerah
 tarif_pajak = st.number_input("Tarif Pajak Daerah (%):", min_value=0.0, value=2.0)
 
 # Tombol Simulasi
@@ -129,19 +137,16 @@ if st.button("🔍 Simulasikan PKB Emisi"):
         rasio_hc = hasil_emisi["HC"] / baku["HC"]
         rasio_emisi = max(rasio_co, rasio_hc)
 
-    # 4. Alfa
-    alfa = nilai_alfa[jenis]
-
-    # 5. KE
+    # 4. KE
     ke = alfa * (rasio_emisi - 1)
 
-    # 6. PKB Dasar
+    # 5. PKB Dasar
     pkb_dasar = dp_pkb * kd
 
-    # 7. PKB Emisi
+    # 6. PKB Emisi
     pkb_emisi = dp_pkb * (kd + ke)
 
-    # 8. Selisih dan persen kenaikan
+    # 7. Selisih
     selisih = pkb_emisi - pkb_dasar
     persen_kenaikan = (selisih / pkb_dasar * 100) if pkb_dasar > 0 else 0
 
@@ -150,7 +155,6 @@ if st.button("🔍 Simulasikan PKB Emisi"):
     # -------------------------------
     st.subheader("📊 Hasil Simulasi PKB")
     st.write(f"**Rasio Emisi:** {rasio_emisi:.3f}")
-    st.write(f"**Nilai Alfa (α):** {alfa}")
     st.write(f"**Koefisien Emisi (KE):** {ke:.4f}")
     st.write("---")
 
@@ -160,5 +164,7 @@ if st.button("🔍 Simulasikan PKB Emisi"):
     col3.metric("Selisih (Rp)", f"{selisih:,.0f}", f"{persen_kenaikan:.2f}%")
 
     st.write("---")
-    st.caption("DP PKB = NJKB × Tarif Pajak Daerah\n\nPKB Emisi = DP PKB × (KD + KE)")
+    st.caption("DP PKB = NJKB × Tarif Pajak Daerah\nPKB Emisi = DP PKB × (KD + KE)\nNilai Alfa (α) dapat diubah sesuai hasil riset atau kebijakan.")
+
+
 
