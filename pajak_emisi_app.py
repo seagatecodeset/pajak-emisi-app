@@ -70,7 +70,7 @@ def kategori_emisi(jenis):
 # Streamlit UI
 # -------------------------------
 st.title("🚗 Simulasi Pajak Emisi Kendaraan Bermotor")
-st.write("Berdasarkan **Permendagri No. 7 Tahun 2025**")
+st.write("Berdasarkan **Permendagri No. 7 Tahun 2025** & **PERMEN LHK no 8 tahun 2023**")
 
 # 1. Jenis Kendaraan
 jenis = st.selectbox(
@@ -161,3 +161,4 @@ if st.button("🔍 Simulasikan PKB Emisi"):
 
     st.write("---")
     st.caption("DP PKB = NJKB × Tarif Pajak Daerah\n\nPKB Emisi = DP PKB × (KD + KE)")
+
