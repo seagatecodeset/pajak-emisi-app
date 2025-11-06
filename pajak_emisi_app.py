@@ -31,13 +31,13 @@ baku_mutu = {
 default_alfa = {
     "Motor 2-tak": 0.3,
     "Motor 4-tak": 0.1,
-    "Sedan/MPV Euro 2": 0.05,
-    "Sedan/MPV Euro 4": 0.05,
-    "SUV/Jeep": 0.07,
-    "Truk/Bis Euro 2": 0.08,
-    "Truk/Bis Euro 4": 0.08,
-    "Niaga Ringan": 0.06,
-    "CNG": 0.05
+    "Sedan/MPV Euro 2": 0.2,
+    "Sedan/MPV Euro 4": 0.1,
+    "SUV/Jeep": 0.25,
+    "Truk/Bis Euro 2": 0.4,
+    "Truk/Bis Euro 4": 0.2,
+    "Niaga Ringan": 0.3,
+    "CNG": 0.1
 }
 
 # -------------------------------
@@ -178,6 +178,7 @@ if st.button("🔍 Simulasikan PKB Emisi"):
 
     st.write("---")
     st.caption("DP PKB = NJKB × Tarif Pajak Daerah\nPKB Emisi = DP PKB × (KD + KE)\nNilai Alfa (α) dapat diubah sesuai hasil riset atau kebijakan.")
+
 
 
 
