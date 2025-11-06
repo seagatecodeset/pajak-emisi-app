@@ -113,11 +113,11 @@ alfa = st.number_input(
 )
 
 # 5. Nilai Jual Kendaraan
-#njkb = st.number_input("Nilai Jual Kendaraan Bermotor (Rp):", min_value=0.0, value=150_000_000.0, step=1_000_000.0)
+# njkb = st.number_input("Nilai Jual Kendaraan Bermotor (Rp):", min_value=0.0, value=150_000_000.0, step=1_000_000.0)
 st.markdown("### 💰 Nilai Jual Kendaraan Bermotor (NJKB)")
 njkb_str = st.text_input(
     "Masukkan Nilai Jual Kendaraan (Rp):",
-    value="150,000,000",
+    value="15,000,000",
     help="Masukkan nilai jual kendaraan, contoh: 150,000,000"
 )
 
@@ -127,6 +127,7 @@ try:
 except ValueError:
     st.error("⚠️ Format angka tidak valid! Gunakan koma atau titik untuk pemisah ribuan.")
     st.stop()
+    
 # 6. Tarif Pajak Daerah
 tarif_pajak = st.number_input("Tarif Pajak Daerah (%):", min_value=0.0, value=2.0)
 
@@ -177,6 +178,7 @@ if st.button("🔍 Simulasikan PKB Emisi"):
 
     st.write("---")
     st.caption("DP PKB = NJKB × Tarif Pajak Daerah\nPKB Emisi = DP PKB × (KD + KE)\nNilai Alfa (α) dapat diubah sesuai hasil riset atau kebijakan.")
+
 
 
 
