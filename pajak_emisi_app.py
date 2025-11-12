@@ -70,7 +70,7 @@ def kategori_emisi(jenis):
 # Streamlit UI
 # -------------------------------
 st.title("🚗 Simulasi Pajak Emisi Kendaraan Bermotor")
-st.caption("Berdasarkan **Permendagri No. 7 Tahun 2025** dan **PERMEN LHK no 8 tahun 2023**")
+st.caption("Berdasarkan **Permendagri No. 7 Tahun 2025** dan **PERMEN LHK No. 8 Tahun 2023**")
 
 # 1. Jenis Kendaraan
 jenis = st.selectbox(
@@ -113,11 +113,10 @@ alfa = st.number_input(
 )
 
 # 5. Nilai Jual Kendaraan
-# njkb = st.number_input("Nilai Jual Kendaraan Bermotor (Rp):", min_value=0.0, value=150_000_000.0, step=1_000_000.0)
 st.markdown("### 💰 Nilai Jual Kendaraan Bermotor (NJKB)")
 njkb_str = st.text_input(
     "Masukkan Nilai Jual Kendaraan (Rp):",
-    value="15,000,000",
+    value="150,000,000",
     help="Masukkan nilai jual kendaraan, contoh: 150,000,000"
 )
 
@@ -127,7 +126,7 @@ try:
 except ValueError:
     st.error("⚠️ Format angka tidak valid! Gunakan koma atau titik untuk pemisah ribuan.")
     st.stop()
-    
+
 # 6. Tarif Pajak Daerah
 tarif_pajak = st.number_input("Tarif Pajak Daerah (%):", min_value=0.0, value=2.0)
 
@@ -150,8 +149,13 @@ if st.button("🔍 Simulasikan PKB Emisi"):
         rasio_hc = hasil_emisi["HC"] / baku["HC"]
         rasio_emisi = max(rasio_co, rasio_hc)
 
-    # 4. KE
-    ke = alfa * (rasio_emisi - 1)
+    # 4. Tentukan KE dan status
+    if rasio_emisi <= 1:
+        ke = 0
+        status_emisi = "✅ LULUS — Emisi di bawah atau sama dengan baku mutu"
+    else:
+        ke = alfa * (rasio_emisi - 1)
+        status_emisi = "⚠️ TIDAK LULUS — Emisi melebihi ambang batas"
 
     # 5. PKB Dasar
     pkb_dasar = dp_pkb * kd
@@ -169,16 +173,25 @@ if st.button("🔍 Simulasikan PKB Emisi"):
     st.subheader("📊 Hasil Simulasi PKB")
     st.write(f"**Rasio Emisi:** {rasio_emisi:.3f}")
     st.write(f"**Koefisien Emisi (KE):** {ke:.4f}")
+    st.info(status_emisi)
     st.write("---")
+
+    # Warna dinamis
+    warna = "normal" if rasio_emisi <= 1 else "inverse"
 
     col1, col2, col3 = st.columns(3)
     col1.metric("PKB Dasar (Rp)", f"{pkb_dasar:,.0f}")
-    col2.metric("PKB Emisi (Rp)", f"{pkb_emisi:,.0f}")
-    col3.metric("Selisih (Rp)", f"{selisih:,.0f}", f"{persen_kenaikan:.2f}%")
+    col2.metric("PKB Emisi (Rp)", f"{pkb_emisi:,.0f}", f"{persen_kenaikan:.2f}%", delta_color=warna)
+    col3.metric("Selisih (Rp)", f"{selisih:,.0f}")
 
     st.write("---")
-    st.caption("DP PKB = NJKB × Tarif Pajak Daerah\nPKB Emisi = DP PKB × (KD + KE)\nNilai Alfa (α) dapat diubah sesuai hasil riset atau kebijakan.")
-
+    st.caption("""
+    🧮 Rumus:
+    - DP PKB = NJKB × Tarif Pajak Daerah  
+    - PKB Dasar = DP PKB × KD  
+    - PKB Emisi = DP PKB × (KD + KE)  
+    - KE = α × (Rasio Emisi - 1)  
+    """)
 
 
 
