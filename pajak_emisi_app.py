@@ -116,7 +116,7 @@ alfa = st.number_input(
 st.markdown("### 💰 Nilai Jual Kendaraan Bermotor (NJKB)")
 njkb_str = st.text_input(
     "Masukkan Nilai Jual Kendaraan (Rp):",
-    value="150,000,000",
+    value="15,000,000",
     help="Masukkan nilai jual kendaraan, contoh: 150,000,000"
 )
 
@@ -192,6 +192,7 @@ if st.button("🔍 Simulasikan PKB Emisi"):
     - PKB Emisi = DP PKB × (KD + KE)  
     - KE = α × (Rasio Emisi - 1)  
     """)
+
 
 
 
