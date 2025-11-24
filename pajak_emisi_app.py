@@ -3,7 +3,6 @@
 # Berdasarkan Permendagri No. 7 Tahun 2025
 # ==========================================
 import streamlit as st
-import datetime
 
 # -------------------------------
 # Data Baku Mutu Emisi
@@ -42,7 +41,7 @@ default_alfa = {
 }
 
 # -------------------------------
-# Nilai KD
+# Nilai KD (Koefisien Dasar)
 # -------------------------------
 nilai_KD = {
     "Motor 2-tak": 1.0,
@@ -67,6 +66,7 @@ def kategori_emisi(jenis):
     else:
         return "Bensin"
 
+
 # -------------------------------
 # Streamlit UI
 # -------------------------------
@@ -74,24 +74,13 @@ st.title("🚗 Simulasi Pajak Emisi Kendaraan Bermotor")
 st.caption("Berdasarkan **Permendagri No. 7 Tahun 2025** dan **PERMEN LHK No. 8 Tahun 2023**")
 
 # 1. Jenis Kendaraan
-jenis = st.selectbox("Pilih Jenis Kendaraan:", list(default_alfa.keys()))
+jenis = st.selectbox(
+    "Pilih Jenis Kendaraan:",
+    list(default_alfa.keys())
+)
 
 # 2. Tahun Kendaraan
 tahun = st.number_input("Masukkan Tahun Kendaraan:", min_value=1980, max_value=2025, value=2020)
-
-# Hitung usia kendaraan
-tahun_sekarang = datetime.datetime.now().year
-usia_kendaraan = tahun_sekarang - tahun
-
-# Input faktor usia (user dapat atur atau otomatis)
-faktor_usia = st.number_input(
-    "Masukkan Faktor Usia Kendaraan (tahun) :",
-    min_value=1.0,
-    max_value=20.0,
-    value=float(max(1, usia_kendaraan)),   # default = usia kendaraan
-    step=0.1,
-    help="Faktor usia dapat mengikuti umur kendaraan atau kebijakan tertentu."
-)
 
 # Tentukan periode baku mutu
 if tahun < 2010:
@@ -113,30 +102,40 @@ else:
     hc = st.number_input("HC (ppm)", min_value=0.0, value=150.0)
     hasil_emisi = {"CO": co, "HC": hc}
 
-# 4. Nilai Alfa
+# 4. Nilai Alfa (dapat diedit user)
 st.markdown("### ⚙️ Pengaturan Lanjutan")
 alfa = st.number_input(
     f"Nilai Alfa (α) untuk {jenis}:",
-    min_value=0.0, max_value=1.0,
+    min_value=0.0,
+    max_value=1.0,
     value=default_alfa[jenis],
     step=0.01
 )
 
-# 5. Nilai Jual Kendaraan (NJKB)
+# 5. Nilai Jual Kendaraan
 st.markdown("### 💰 Nilai Jual Kendaraan Bermotor (NJKB)")
-njkb_str = st.text_input("Masukkan Nilai Jual Kendaraan (Rp):", value="15,000,000")
+njkb_str = st.text_input(
+    "Masukkan Nilai Jual Kendaraan (Rp):",
+    value="15,000,000"
+)
 
 try:
     njkb = float(njkb_str.replace(",", "").replace(".", ""))
 except ValueError:
-    st.error("⚠️ Format angka tidak valid!")
+    st.error("⚠️ Format angka tidak valid! Gunakan koma atau titik untuk pemisah ribuan.")
     st.stop()
 
 # 6. Tarif Pajak Daerah
 tarif_pajak = st.number_input("Tarif Pajak Daerah (%):", min_value=0.0, value=2.0)
 
-# Tombol Simulasi
+# -------------------------------
+# SIMULASI
+# -------------------------------
 if st.button("🔍 Simulasikan PKB Emisi"):
+
+    # Hitung usia kendaraan
+    usia = 2025 - tahun
+    faktor_usia = 1 if usia < 10 else 1.5
 
     # 1. DP PKB
     dp_pkb = njkb * (tarif_pajak / 100)
@@ -154,10 +153,10 @@ if st.button("🔍 Simulasikan PKB Emisi"):
         rasio_hc = hasil_emisi["HC"] / baku["HC"]
         rasio_emisi = max(rasio_co, rasio_hc)
 
-    # 4. KE dengan faktor usia
+    # 4. Tentukan KE dan status
     if rasio_emisi <= 1:
         ke = 0
-        status_emisi = "✅ LULUS — Emisi sesuai atau di bawah ambang batas"
+        status_emisi = "✅ LULUS — Emisi di bawah atau sama dengan baku mutu"
     else:
         ke = alfa * (rasio_emisi - 1) * faktor_usia
         status_emisi = "⚠️ TIDAK LULUS — Emisi melebihi ambang batas"
@@ -173,32 +172,28 @@ if st.button("🔍 Simulasikan PKB Emisi"):
     persen_kenaikan = (selisih / pkb_dasar * 100) if pkb_dasar > 0 else 0
 
     # -------------------------------
-    # Tampilkan hasil
+    # Hasil Simulasi
     # -------------------------------
     st.subheader("📊 Hasil Simulasi PKB")
-    st.write(f"**Usia Kendaraan:** {usia_kendaraan} tahun")
-    st.write(f"**Faktor Usia:** {faktor_usia:.2f}")
+    st.write(f"**Usia Kendaraan:** {usia} tahun")
+    st.write(f"**Faktor Usia:** {faktor_usia}")
     st.write(f"**Rasio Emisi:** {rasio_emisi:.3f}")
     st.write(f"**Koefisien Emisi (KE):** {ke:.4f}")
     st.info(status_emisi)
+    st.write("---")
+
+    warna = "normal" if rasio_emisi <= 1 else "inverse"
 
     col1, col2, col3 = st.columns(3)
     col1.metric("PKB Dasar (Rp)", f"{pkb_dasar:,.0f}")
-    col2.metric("PKB Emisi (Rp)", f"{pkb_emisi:,.0f}", f"{persen_kenaikan:.2f}%")
+    col2.metric("PKB Emisi (Rp)", f"{pkb_emisi:,.0f}", f"{persen_kenaikan:.2f}%", delta_color=warna)
     col3.metric("Selisih (Rp)", f"{selisih:,.0f}")
 
+    st.write("---")
     st.caption("""
     🧮 Rumus:
-    - KE = α × (Rasio Emisi − 1) × Faktor Usia  
+    - DP PKB = NJKB × Tarif Pajak Daerah  
     - PKB Dasar = DP PKB × KD  
     - PKB Emisi = DP PKB × (KD + KE)  
+    - KE = α × (Rasio Emisi − 1) × Faktor Usia  
     """)
-
-
-
-
-
-
-
-
-
