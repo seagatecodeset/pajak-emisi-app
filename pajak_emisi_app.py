@@ -85,7 +85,7 @@ usia_kendaraan = tahun_sekarang - tahun
 
 # Input faktor usia (user dapat atur atau otomatis)
 faktor_usia = st.number_input(
-    "Masukkan Faktor Usia Kendaraan:",
+    "Masukkan Faktor Usia Kendaraan (tahun) :",
     min_value=1.0,
     max_value=20.0,
     value=float(max(1, usia_kendaraan)),   # default = usia kendaraan
@@ -193,6 +193,7 @@ if st.button("🔍 Simulasikan PKB Emisi"):
     - PKB Dasar = DP PKB × KD  
     - PKB Emisi = DP PKB × (KD + KE)  
     """)
+
 
 
 
