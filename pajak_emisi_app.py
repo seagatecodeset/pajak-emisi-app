@@ -112,6 +112,12 @@ alfa = st.number_input(
     step=0.01
 )
 
+# Tambahkan Opsi: Menggunakan Faktor Usia atau Tidak
+use_fusia = st.radio(
+    "Gunakan Faktor Usia dalam Perhitungan KE?",
+    ("Ya, gunakan faktor usia", "Tidak, tanpa faktor usia")
+)
+
 # 5. Nilai Jual Kendaraan
 st.markdown("### 💰 Nilai Jual Kendaraan Bermotor (NJKB)")
 njkb_str = st.text_input(
@@ -134,8 +140,16 @@ tarif_pajak = st.number_input("Tarif Pajak Daerah (%):", min_value=0.0, value=2.
 if st.button("🔍 Simulasikan PKB Emisi"):
 
     # Hitung usia kendaraan
-    usia = 2025 - tahun
-    faktor_usia = 1 if usia < 10 else 1.5
+    from datetime import datetime
+    tahun_now = datetime.now().year
+    usia = tahun_now - tahun
+    #usia = 2025 - tahun
+
+    # Faktor usia jika dipilih
+    if use_fusia == "Ya, gunakan faktor usia":
+        faktor_usia = 1 if usia < 10 else 1.5
+    else:
+        faktor_usia = 1  # dianggap tidak mempengaruhi
 
     # 1. DP PKB
     dp_pkb = njkb * (tarif_pajak / 100)
@@ -176,7 +190,8 @@ if st.button("🔍 Simulasikan PKB Emisi"):
     # -------------------------------
     st.subheader("📊 Hasil Simulasi PKB")
     st.write(f"**Usia Kendaraan:** {usia} tahun")
-    st.write(f"**Faktor Usia:** {faktor_usia}")
+    st.write(f"**Faktor Usia Dipakai?** {'Ya' if use_fusia=='Ya, gunakan faktor usia' else 'Tidak'}")
+    st.write(f"**Nilai Faktor Usia:** {faktor_usia}")
     st.write(f"**Rasio Emisi:** {rasio_emisi:.3f}")
     st.write(f"**Koefisien Emisi (KE):** {ke:.4f}")
     st.info(status_emisi)
@@ -197,3 +212,5 @@ if st.button("🔍 Simulasikan PKB Emisi"):
     - PKB Emisi = DP PKB × (KD + KE)  
     - KE = α × (Rasio Emisi − 1) × Faktor Usia  
     """)
+
+
