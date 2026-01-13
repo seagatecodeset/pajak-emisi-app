@@ -10,15 +10,11 @@ from datetime import datetime
 # ===============================
 # KONFIGURASI LLM (DEEPSEEK)
 # ===============================
-MODEL_LLM = "deepseek/deepseek-r1"
+MODEL_LLM = "deepseek-chat"
 
 client = OpenAI(
-    api_key=st.secrets.get("OPENROUTER_API_KEY"),
-    base_url="https://openrouter.ai/api/v1",
-    default_headers={
-        "HTTP-Referer": "https://streamlit.io",
-        "X-Title": "Simulasi Pajak Emisi"
-    }
+    api_key=st.secrets.get("DEEPSEEK_API_KEY"),
+    base_url="https://api.deepseek.com/v1"
 )
 
 # ===============================
@@ -251,47 +247,23 @@ if st.button("🔍 Simulasikan PKB Emisi"):
 # ===============================
 # CHAT LLM (BAGIAN BAWAH)
 # ===============================
-st.markdown("---")
-st.subheader("💬 Asisten Regulasi & Laporan")
+response = client.chat.completions.create(
+    model=MODEL_LLM,
+    messages=[
+        {
+            "role": "system",
+            "content": (
+                "Anda adalah asisten ahli pajak emisi kendaraan bermotor Indonesia. "
+                "Gunakan laporan berikut sebagai referensi utama:\n\n"
+                f"{laporan_text[:8000]}"
+            )
+        },
+        {"role": "user", "content": user_msg}
+    ],
+    temperature=0.2
+)
 
-if "chat" not in st.session_state:
-    st.session_state.chat = []
-
-for role, msg in st.session_state.chat:
-    st.markdown(f"**{role}:** {msg}")
-
-user_msg = st.text_input("Tulis pertanyaan Anda:")
-
-if user_msg:
-    st.session_state.chat.append(("User", user_msg))
-
-    with st.spinner("🤖 Menjawab..."):
-        response = client.chat.completions.create(
-            model=MODEL_LLM,
-            messages=[
-                {
-                    "role": "system",
-                    "content": (
-                        "Anda adalah asisten ahli pajak emisi kendaraan bermotor Indonesia. "
-                        "Gunakan laporan berikut sebagai referensi utama:\n\n"
-                        f"{laporan_text[:8000]}"
-                    )
-                },
-                {"role": "user", "content": user_msg}
-            ],
-            temperature=0.2
-        )
-
-    answer = response.choices[0].message.content
-    st.session_state.chat.append(("Asisten", answer))
-    st.experimental_rerun()
-
-if st.button("🧪 Test LLM"):
-    r = client.chat.completions.create(
-        model=MODEL_LLM,
-        messages=[{"role": "user", "content": "Halo"}]
-    )
-    st.write(r.choices[0].message.content)
+answer = response.choices[0].message.content
 
 
 
