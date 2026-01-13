@@ -12,6 +12,7 @@ OPENROUTER_API_KEY = "sk-fcf488b164d14546924f24f4f0310b15"
 # ===============================
 # KONFIGURASI LLM (DEEPSEEK)
 # ===============================
+MODEL_LLM = "deepseek/deepseek-chat"
 client = OpenAI(
     api_key=st.secrets.get("OPENROUTER_API_KEY", ""),
     base_url="https://openrouter.ai/api/v1"
@@ -281,6 +282,7 @@ if user_msg:
     answer = response.choices[0].message.content
     st.session_state.chat.append(("Asisten", answer))
     st.experimental_rerun()
+
 
 
 
