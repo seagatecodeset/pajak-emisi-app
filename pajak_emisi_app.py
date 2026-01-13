@@ -22,7 +22,7 @@ if not api_key:
 client = OpenAI(api_key=api_key)
 
 # debug aman (boleh dihapus nanti)
-st.caption(f"🔑 API Key terbaca: {bool(api_key)} | Model: {MODEL_LLM}")
+# st.caption(f"🔑 API Key terbaca: {bool(api_key)} | Model: {MODEL_LLM}")
 
 # ===============================
 # LOAD & CACHE LAPORAN PDF
@@ -301,6 +301,7 @@ if user_msg:
 
             except Exception as e:
                 st.error(f"⚠️ Terjadi error ChatGPT: {e}")
+
 
 
 
