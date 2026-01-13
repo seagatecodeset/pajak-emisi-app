@@ -245,25 +245,50 @@ if st.button("🔍 Simulasikan PKB Emisi"):
     """)
 
 # ===============================
-# CHAT LLM (BAGIAN BAWAH)
+# CHAT LLM (BAGIAN BAWAH) — STABIL
 # ===============================
-response = client.chat.completions.create(
-    model=MODEL_LLM,
-    messages=[
-        {
-            "role": "system",
-            "content": (
-                "Anda adalah asisten ahli pajak emisi kendaraan bermotor Indonesia. "
-                "Gunakan laporan berikut sebagai referensi utama:\n\n"
-                f"{laporan_text[:8000]}"
-            )
-        },
-        {"role": "user", "content": user_msg}
-    ],
-    temperature=0.2
-)
+st.markdown("---")
+st.subheader("💬 Asisten Regulasi & Laporan (DeepSeek)")
 
-answer = response.choices[0].message.content
+# Simpan histori chat
+if "chat_history" not in st.session_state:
+    st.session_state.chat_history = []
+
+# Tampilkan histori
+for role, msg in st.session_state.chat_history:
+    st.markdown(f"**{role}:** {msg}")
+
+# Input user
+user_msg = st.text_input("Tulis pertanyaan Anda tentang pajak emisi / laporan:")
+
+# Tombol kirim (AMAN)
+if st.button("📨 Kirim Pertanyaan") and user_msg.strip() != "":
+    st.session_state.chat_history.append(("User", user_msg))
+
+    with st.spinner("🤖 DeepSeek sedang menjawab..."):
+        try:
+            response = client.chat.completions.create(
+                model=MODEL_LLM,
+                messages=[
+                    {
+                        "role": "system",
+                        "content": (
+                            "Anda adalah asisten ahli pajak emisi kendaraan bermotor Indonesia. "
+                            "Jawaban HARUS berdasarkan laporan berikut:\n\n"
+                            f"{laporan_text[:8000]}"
+                        )
+                    },
+                    {"role": "user", "content": user_msg}
+                ],
+                temperature=0.2
+            )
+
+            answer = response.choices[0].message.content
+        except Exception as e:
+            answer = f"⚠️ Terjadi error saat memanggil LLM:\n{e}"
+
+    st.session_state.chat_history.append(("Asisten", answer))
+    st.experimental_rerun()
 
 
 
