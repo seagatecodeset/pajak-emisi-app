@@ -147,7 +147,12 @@ if st.button("🔍 Simulasikan PKB Emisi"):
 
     # Faktor usia jika dipilih
     if use_fusia == "Ya, gunakan faktor usia":
-        faktor_usia = 1 if usia < 10 else 1.5
+        if usia < 10:
+            faktor_usia = 1
+        elif 10 <= usia <= 20:
+            faktor_usia = 1.5
+        else:  # usia > 20
+            faktor_usia = 2
     else:
         faktor_usia = 1  # dianggap tidak mempengaruhi
 
@@ -212,5 +217,6 @@ if st.button("🔍 Simulasikan PKB Emisi"):
     - PKB Emisi = DP PKB × (KD + KE)  
     - KE = α × (Rasio Emisi − 1) × Faktor Usia  
     """)
+
 
 
