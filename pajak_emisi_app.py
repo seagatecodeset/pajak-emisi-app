@@ -3,6 +3,32 @@
 # Berdasarkan Permendagri No. 7 Tahun 2025
 # ==========================================
 import streamlit as st
+import openai
+from pypdf import PdfReader
+from datetime import datetime
+
+OPENROUTER_API_KEY = "sk-fcf488b164d14546924f24f4f0310b15"
+
+# ===============================
+# KONFIGURASI LLM (DEEPSEEK)
+# ===============================
+openai.api_base = "https://openrouter.ai/api/v1"
+openai.api_key = st.secrets.get("OPENROUTER_API_KEY", "")
+MODEL_LLM = "deepseek/deepseek-chat"
+
+# ===============================
+# LOAD & CACHE LAPORAN PDF
+# ===============================
+@st.cache_data(show_spinner=False)
+def load_pdf_text(path):
+    reader = PdfReader(path)
+    text = ""
+    for page in reader.pages:
+        if page.extract_text():
+            text += page.extract_text() + "\n"
+    return text
+
+laporan_text = load_pdf_text("laporan Akhir KPL DLH JKT.pdf")
 
 # -------------------------------
 # Data Baku Mutu Emisi
@@ -65,7 +91,6 @@ def kategori_emisi(jenis):
         return "Roda Dua"
     else:
         return "Bensin"
-
 
 # -------------------------------
 # Streamlit UI
@@ -217,6 +242,67 @@ if st.button("🔍 Simulasikan PKB Emisi"):
     - PKB Emisi = DP PKB × (KD + KE)  
     - KE = α × (Rasio Emisi − 1) × Faktor Usia  
     """)
+
+# ===============================
+# FLOATING CHAT LLM
+# ===============================
+st.markdown("""
+<style>
+.chat-box {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    width: 360px;
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0px 4px 25px rgba(0,0,0,0.25);
+    padding: 15px;
+    z-index: 9999;
+}
+.chat-history {
+    height: 220px;
+    overflow-y: auto;
+    font-size: 0.9em;
+}
+</style>
+""", unsafe_allow_html=True)
+
+if "chat" not in st.session_state:
+    st.session_state.chat = []
+
+st.markdown('<div class="chat-box">', unsafe_allow_html=True)
+st.markdown("💬 **Asisten Pajak Emisi**")
+
+for role, msg in st.session_state.chat:
+    st.markdown(f"**{role}:** {msg}")
+
+user_msg = st.text_input("Tanya regulasi / laporan:")
+
+if user_msg:
+    st.session_state.chat.append(("User", user_msg))
+
+    response = openai.ChatCompletion.create(
+        model=MODEL_LLM,
+        messages=[
+            {
+                "role": "system",
+                "content": (
+                    "Anda adalah asisten ahli pajak emisi kendaraan bermotor Indonesia. "
+                    "Gunakan laporan berikut sebagai referensi utama:\n\n"
+                    f"{laporan_text[:8000]}"
+                )
+            },
+            {"role": "user", "content": user_msg}
+        ],
+        temperature=0.2
+    )
+
+    answer = response.choices[0].message.content
+    st.session_state.chat.append(("Asisten", answer))
+    st.experimental_rerun()
+
+st.markdown("</div>", unsafe_allow_html=True)
+
 
 
 
