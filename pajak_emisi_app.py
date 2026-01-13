@@ -245,12 +245,12 @@ if st.button("🔍 Simulasikan PKB Emisi"):
     """)
 
 # ===============================
-# CHAT LLM (BAGIAN BAWAH) — STABIL
+# CHAT LLM (BAGIAN BAWAH) — FINAL
 # ===============================
 st.markdown("---")
 st.subheader("💬 Asisten Regulasi & Laporan (DeepSeek)")
 
-# Simpan histori chat
+# Session state untuk histori chat
 if "chat_history" not in st.session_state:
     st.session_state.chat_history = []
 
@@ -261,7 +261,7 @@ for role, msg in st.session_state.chat_history:
 # Input user
 user_msg = st.text_input("Tulis pertanyaan Anda tentang pajak emisi / laporan:")
 
-# Tombol kirim (AMAN)
+# Tombol kirim
 if st.button("📨 Kirim Pertanyaan") and user_msg.strip() != "":
     st.session_state.chat_history.append(("User", user_msg))
 
@@ -282,13 +282,13 @@ if st.button("📨 Kirim Pertanyaan") and user_msg.strip() != "":
                 ],
                 temperature=0.2
             )
-
             answer = response.choices[0].message.content
+
         except Exception as e:
             answer = f"⚠️ Terjadi error saat memanggil LLM:\n{e}"
 
     st.session_state.chat_history.append(("Asisten", answer))
-    st.experimental_rerun()
+    st.rerun()
 
 
 
