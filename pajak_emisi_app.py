@@ -8,13 +8,12 @@ from pypdf import PdfReader
 from datetime import datetime
 
 # ===============================
-# KONFIGURASI LLM (OPENROUTER)
+# KONFIGURASI LLM (CHATGPT GPT-5.2)
 # ===============================
-MODEL_LLM = "deepseek/deepseek-chat"  # stabil & murah
+MODEL_LLM = "gpt-5.2"
 
 client = OpenAI(
-    api_key=st.secrets["OPENROUTER_API_KEY"],
-    base_url="https://openrouter.ai/api/v1"
+    api_key=st.secrets["OPENAI_API_KEY"]
 )
 
 # ===============================
@@ -245,26 +244,28 @@ if st.button("🔍 Simulasikan PKB Emisi"):
     """)
 
 # ===============================
-# CHATBOT LLM (OPENROUTER)
+# CHATBOT CHATGPT (GPT-5.2)
 # ===============================
 st.markdown("---")
-st.subheader("💬 Asisten Pajak Emisi (AJASI)")
+st.subheader("💬 Asisten Pajak Emisi")
 
 if "chat_history" not in st.session_state:
     st.session_state.chat_history = []
 
-# tampilkan histori
+# tampilkan histori chat
 for role, msg in st.session_state.chat_history:
     with st.chat_message(role):
         st.markdown(msg)
 
-user_msg = st.chat_input("Tanyakan seputar pajak emisi, baku mutu, atau regulasi")
+user_msg = st.chat_input(
+    "Tanyakan seputar pajak emisi, baku mutu, atau regulasi kendaraan"
+)
 
 if user_msg:
     st.session_state.chat_history.append(("user", user_msg))
 
     with st.chat_message("assistant"):
-        with st.spinner("🤖 Menganalisis laporan..."):
+        with st.spinner("🤖 Menganalisis regulasi dan laporan..."):
             try:
                 response = client.chat.completions.create(
                     model=MODEL_LLM,
@@ -273,8 +274,9 @@ if user_msg:
                             "role": "system",
                             "content": (
                                 "Anda adalah asisten ahli pajak emisi kendaraan bermotor Indonesia. "
-                                "Jawaban HARUS berdasarkan laporan resmi berikut:\n\n"
-                                f"{laporan_text[:12000]}"
+                                "Gunakan bahasa formal kebijakan publik. "
+                                "Jawaban HARUS berdasarkan regulasi Indonesia dan laporan berikut:\n\n"
+                                f"{laporan_text[:7000]}"
                             )
                         }
                     ] + [
@@ -282,6 +284,7 @@ if user_msg:
                         for r, m in st.session_state.chat_history
                     ],
                     temperature=0.2,
+                    max_tokens=500
                 )
 
                 answer = response.choices[0].message.content
@@ -289,7 +292,8 @@ if user_msg:
                 st.session_state.chat_history.append(("assistant", answer))
 
             except Exception as e:
-                st.error(f"⚠️ Terjadi error saat memanggil LLM: {e}")
+                st.error(f"⚠️ Terjadi error ChatGPT: {e}")
+
 
 
 
