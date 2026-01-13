@@ -248,7 +248,7 @@ if st.button("🔍 Simulasikan PKB Emisi"):
 # CHATBOT LLM (OPENROUTER)
 # ===============================
 st.markdown("---")
-st.subheader("💬 Asisten Pajak Emisi (LLM)")
+st.subheader("💬 Asisten Pajak Emisi (AJASI)")
 
 if "chat_history" not in st.session_state:
     st.session_state.chat_history = []
@@ -290,6 +290,7 @@ if user_msg:
 
             except Exception as e:
                 st.error(f"⚠️ Terjadi error saat memanggil LLM: {e}")
+
 
 
 
