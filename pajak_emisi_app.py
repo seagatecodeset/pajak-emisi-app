@@ -3,7 +3,7 @@
 # Berdasarkan Permendagri No. 7 Tahun 2025
 # ==========================================
 import streamlit as st
-import openai
+from openai import OpenAI
 from pypdf import PdfReader
 from datetime import datetime
 
@@ -12,9 +12,10 @@ OPENROUTER_API_KEY = "sk-fcf488b164d14546924f24f4f0310b15"
 # ===============================
 # KONFIGURASI LLM (DEEPSEEK)
 # ===============================
-openai.api_base = "https://openrouter.ai/api/v1"
-openai.api_key = st.secrets.get("OPENROUTER_API_KEY", "")
-MODEL_LLM = "deepseek/deepseek-chat"
+client = OpenAI(
+    api_key=st.secrets.get("OPENROUTER_API_KEY", ""),
+    base_url="https://openrouter.ai/api/v1"
+)
 
 # ===============================
 # LOAD & CACHE LAPORAN PDF
@@ -261,14 +262,14 @@ if user_msg:
     st.session_state.chat.append(("User", user_msg))
 
     with st.spinner("🤖 Menjawab..."):
-        response = openai.ChatCompletion.create(
+        response = client.chat.completions.create(
             model=MODEL_LLM,
             messages=[
                 {
                     "role": "system",
                     "content": (
                         "Anda adalah asisten ahli pajak emisi kendaraan bermotor Indonesia. "
-                        "Jawaban harus berbasis laporan berikut:\n\n"
+                        "Gunakan laporan berikut sebagai referensi utama:\n\n"
                         f"{laporan_text[:8000]}"
                     )
                 },
@@ -280,6 +281,7 @@ if user_msg:
     answer = response.choices[0].message.content
     st.session_state.chat.append(("Asisten", answer))
     st.experimental_rerun()
+
 
 
 
