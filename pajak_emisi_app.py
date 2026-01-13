@@ -6,15 +6,23 @@ import streamlit as st
 from openai import OpenAI
 from pypdf import PdfReader
 from datetime import datetime
+import os
 
 # ===============================
-# KONFIGURASI LLM (CHATGPT GPT-5.2)
+# KONFIGURASI LLM (CHATGPT)
 # ===============================
-MODEL_LLM = "gpt-5.2"
+MODEL_LLM = "gpt-5.2"  # jika error, ganti ke "gpt-4.1" atau "gpt-4o"
 
-client = OpenAI(
-    api_key=st.secrets["OPENAI_API_KEY"]
-)
+api_key = st.secrets.get("OPENAI_API_KEY") or os.getenv("OPENAI_API_KEY")
+
+if not api_key:
+    st.error("❌ OPENAI_API_KEY belum diset di Streamlit Secrets atau Environment Variable")
+    st.stop()
+
+client = OpenAI(api_key=api_key)
+
+# debug aman (boleh dihapus nanti)
+st.caption(f"🔑 API Key terbaca: {bool(api_key)} | Model: {MODEL_LLM}")
 
 # ===============================
 # LOAD & CACHE LAPORAN PDF
@@ -293,6 +301,7 @@ if user_msg:
 
             except Exception as e:
                 st.error(f"⚠️ Terjadi error ChatGPT: {e}")
+
 
 
 
