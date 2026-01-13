@@ -8,13 +8,13 @@ from pypdf import PdfReader
 from datetime import datetime
 
 # ===============================
-# KONFIGURASI LLM (DEEPSEEK)
+# KONFIGURASI LLM (OPENROUTER)
 # ===============================
-MODEL_LLM = "deepseek-chat"
+MODEL_LLM = "deepseek/deepseek-chat"  # stabil & murah
 
 client = OpenAI(
-    api_key=st.secrets.get("DEEPSEEK_API_KEY"),
-    base_url="https://api.deepseek.com/v1"
+    api_key=st.secrets["OPENROUTER_API_KEY"],
+    base_url="https://openrouter.ai/api/v1"
 )
 
 # ===============================
@@ -245,51 +245,51 @@ if st.button("🔍 Simulasikan PKB Emisi"):
     """)
 
 # ===============================
-# CHAT LLM (BAGIAN BAWAH) — FINAL
+# CHATBOT LLM (OPENROUTER)
 # ===============================
 st.markdown("---")
-st.subheader("💬 Asisten Regulasi & Laporan (DeepSeek)")
+st.subheader("💬 Asisten Pajak Emisi (LLM)")
 
-# Session state untuk histori chat
 if "chat_history" not in st.session_state:
     st.session_state.chat_history = []
 
-# Tampilkan histori
+# tampilkan histori
 for role, msg in st.session_state.chat_history:
-    st.markdown(f"**{role}:** {msg}")
+    with st.chat_message(role):
+        st.markdown(msg)
 
-# Input user
-user_msg = st.text_input("Tulis pertanyaan Anda tentang pajak emisi / laporan:")
+user_msg = st.chat_input("Tanyakan seputar pajak emisi, baku mutu, atau regulasi")
 
-# Tombol kirim
-if st.button("📨 Kirim Pertanyaan") and user_msg.strip() != "":
-    st.session_state.chat_history.append(("User", user_msg))
+if user_msg:
+    st.session_state.chat_history.append(("user", user_msg))
 
-    with st.spinner("🤖 DeepSeek sedang menjawab..."):
-        try:
-            response = client.chat.completions.create(
-                model=MODEL_LLM,
-                messages=[
-                    {
-                        "role": "system",
-                        "content": (
-                            "Anda adalah asisten ahli pajak emisi kendaraan bermotor Indonesia. "
-                            "Jawaban HARUS berdasarkan laporan berikut:\n\n"
-                            f"{laporan_text[:8000]}"
-                        )
-                    },
-                    {"role": "user", "content": user_msg}
-                ],
-                temperature=0.2
-            )
-            answer = response.choices[0].message.content
+    with st.chat_message("assistant"):
+        with st.spinner("🤖 Menganalisis laporan..."):
+            try:
+                response = client.chat.completions.create(
+                    model=MODEL_LLM,
+                    messages=[
+                        {
+                            "role": "system",
+                            "content": (
+                                "Anda adalah asisten ahli pajak emisi kendaraan bermotor Indonesia. "
+                                "Jawaban HARUS berdasarkan laporan resmi berikut:\n\n"
+                                f"{laporan_text[:12000]}"
+                            )
+                        }
+                    ] + [
+                        {"role": r, "content": m}
+                        for r, m in st.session_state.chat_history
+                    ],
+                    temperature=0.2,
+                )
 
-        except Exception as e:
-            answer = f"⚠️ Terjadi error saat memanggil LLM:\n{e}"
+                answer = response.choices[0].message.content
+                st.markdown(answer)
+                st.session_state.chat_history.append(("assistant", answer))
 
-    st.session_state.chat_history.append(("Asisten", answer))
-    st.rerun()
-
+            except Exception as e:
+                st.error(f"⚠️ Terjadi error saat memanggil LLM: {e}")
 
 
 
