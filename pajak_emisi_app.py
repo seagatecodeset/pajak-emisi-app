@@ -244,64 +244,42 @@ if st.button("🔍 Simulasikan PKB Emisi"):
     """)
 
 # ===============================
-# FLOATING CHAT LLM
+# CHAT LLM (BAGIAN BAWAH)
 # ===============================
-st.markdown("""
-<style>
-.chat-box {
-    position: fixed;
-    bottom: 20px;
-    right: 20px;
-    width: 360px;
-    background: white;
-    border-radius: 12px;
-    box-shadow: 0px 4px 25px rgba(0,0,0,0.25);
-    padding: 15px;
-    z-index: 9999;
-}
-.chat-history {
-    height: 220px;
-    overflow-y: auto;
-    font-size: 0.9em;
-}
-</style>
-""", unsafe_allow_html=True)
+st.markdown("---")
+st.subheader("💬 Asisten Regulasi & Laporan")
 
 if "chat" not in st.session_state:
     st.session_state.chat = []
 
-st.markdown('<div class="chat-box">', unsafe_allow_html=True)
-st.markdown("💬 **Asisten Pajak Emisi**")
-
 for role, msg in st.session_state.chat:
     st.markdown(f"**{role}:** {msg}")
 
-user_msg = st.text_input("Tanya regulasi / laporan:")
+user_msg = st.text_input("Tulis pertanyaan Anda:")
 
 if user_msg:
     st.session_state.chat.append(("User", user_msg))
 
-    response = openai.ChatCompletion.create(
-        model=MODEL_LLM,
-        messages=[
-            {
-                "role": "system",
-                "content": (
-                    "Anda adalah asisten ahli pajak emisi kendaraan bermotor Indonesia. "
-                    "Gunakan laporan berikut sebagai referensi utama:\n\n"
-                    f"{laporan_text[:8000]}"
-                )
-            },
-            {"role": "user", "content": user_msg}
-        ],
-        temperature=0.2
-    )
+    with st.spinner("🤖 Menjawab..."):
+        response = openai.ChatCompletion.create(
+            model=MODEL_LLM,
+            messages=[
+                {
+                    "role": "system",
+                    "content": (
+                        "Anda adalah asisten ahli pajak emisi kendaraan bermotor Indonesia. "
+                        "Jawaban harus berbasis laporan berikut:\n\n"
+                        f"{laporan_text[:8000]}"
+                    )
+                },
+                {"role": "user", "content": user_msg}
+            ],
+            temperature=0.2
+        )
 
     answer = response.choices[0].message.content
     st.session_state.chat.append(("Asisten", answer))
     st.experimental_rerun()
-
-st.markdown("</div>", unsafe_allow_html=True)
 
 
 
