@@ -7,6 +7,9 @@ from openai import OpenAI
 from pypdf import PdfReader
 from datetime import datetime
 
+st.write("API key terbaca:", bool(st.secrets.get("OPENROUTER_API_KEY")))
+st.write("Model:", MODEL_LLM)
+
 # ===============================
 # KONFIGURASI LLM (DEEPSEEK)
 # ===============================
@@ -280,6 +283,7 @@ if user_msg:
     answer = response.choices[0].message.content
     st.session_state.chat.append(("Asisten", answer))
     st.experimental_rerun()
+
 
 
 
