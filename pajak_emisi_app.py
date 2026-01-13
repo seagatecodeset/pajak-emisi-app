@@ -10,14 +10,16 @@ from datetime import datetime
 # ===============================
 # KONFIGURASI LLM (DEEPSEEK)
 # ===============================
-MODEL_LLM = "deepseek/deepseek-chat"
-client = OpenAI(
-    api_key=st.secrets.get("OPENROUTER_API_KEY", ""),
-    base_url="https://openrouter.ai/api/v1"
-)
+MODEL_LLM = "deepseek/deepseek-r1"
 
-st.write("API key terbaca:", bool(st.secrets.get("OPENROUTER_API_KEY")))
-st.write("Model:", MODEL_LLM)
+client = OpenAI(
+    api_key=st.secrets.get("OPENROUTER_API_KEY"),
+    base_url="https://openrouter.ai/api/v1",
+    default_headers={
+        "HTTP-Referer": "https://streamlit.io",
+        "X-Title": "Simulasi Pajak Emisi"
+    }
+)
 
 # ===============================
 # LOAD & CACHE LAPORAN PDF
@@ -283,6 +285,7 @@ if user_msg:
     answer = response.choices[0].message.content
     st.session_state.chat.append(("Asisten", answer))
     st.experimental_rerun()
+
 
 
 
