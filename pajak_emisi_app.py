@@ -286,6 +286,13 @@ if user_msg:
     st.session_state.chat.append(("Asisten", answer))
     st.experimental_rerun()
 
+if st.button("🧪 Test LLM"):
+    r = client.chat.completions.create(
+        model=MODEL_LLM,
+        messages=[{"role": "user", "content": "Halo"}]
+    )
+    st.write(r.choices[0].message.content)
+
 
 
 
