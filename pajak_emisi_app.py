@@ -11,6 +11,17 @@ import os
 # ===============================
 # KONFIGURASI LLM (CHATGPT)
 # ===============================
+MODEL_LLM = "gpt-5.2"  # jika error, ganti ke "gpt-4.1" atau "gpt-4o"
+
+api_key = st.secrets.get("OPENAI_API_KEY") or os.getenv("OPENAI_API_KEY")
+
+if not api_key:
+    st.error("❌ OPENAI_API_KEY belum diset di Streamlit Secrets atau Environment Variable")
+    st.stop()
+
+client = OpenAI(api_key=api_key)
+
+'''
 MODEL_LLM = "openai/gpt-4.1-mini"
 
 api_key = st.secrets.get("OPENROUTER_API_KEY") or os.getenv("OPENROUTER_API_KEY")
@@ -23,7 +34,7 @@ client = OpenAI(
     api_key=api_key,
     base_url="https://openrouter.ai/api/v1"
 )
-
+'''
 # ===============================
 # LOAD & CACHE LAPORAN PDF
 # ===============================
@@ -301,6 +312,7 @@ if user_msg:
 
             except Exception as e:
                 st.error(f"⚠️ Terjadi error ChatGPT: {e}")
+
 
 
 
