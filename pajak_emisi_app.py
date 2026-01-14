@@ -288,7 +288,6 @@ if user_msg:
                         {"role": r, "content": m}
                         for r, m in st.session_state.chat_history
                     ],
-                    temperature=0.2,
                     max_completion_tokens=300
                 )
 
@@ -298,6 +297,7 @@ if user_msg:
 
             except Exception as e:
                 st.error(f"⚠️ Terjadi error ChatGPT: {e}")
+
 
 
 
