@@ -249,7 +249,7 @@ if st.button("🔍 Simulasikan PKB Emisi"):
     """)
 
 # ===============================
-# CHATBOT CHATGPT (GPT-5.2)
+# CHATBOT CHATGPT (GPT-5 / GPT-5-mini)
 # ===============================
 st.markdown("---")
 st.subheader("💬 Asisten Pajak Emisi")
@@ -273,39 +273,52 @@ if user_msg:
         with st.spinner("🤖 Menganalisis regulasi dan laporan..."):
             try:
                 response = client.chat.completions.create(
-                    model=MODEL_LLM,  # contoh: "gpt-5.2"
+                    model=MODEL_LLM,  # disarankan: "gpt-5-mini"
                     messages=[
                         {
                             "role": "system",
                             "content": (
-                                "Anda adalah asisten ahli pajak emisi kendaraan bermotor Indonesia. "
-                                "Gunakan bahasa formal kebijakan publik. "
-                                "Jawaban HARUS berdasarkan regulasi Indonesia dan laporan berikut.\n\n"
-                                f"{laporan_text[:7000]}"
+                                "Anda adalah asisten ahli pajak emisi kendaraan bermotor Indonesia.\n"
+                                "Gunakan bahasa formal kebijakan publik.\n"
+                                "Jawaban HARUS berdasarkan regulasi Indonesia.\n\n"
+                                "ATURAN WAJIB:\n"
+                                "1. Lakukan analisis secara internal.\n"
+                                "2. SETELAH ITU, WAJIB tuliskan hasil akhir dalam format:\n"
+                                "[JAWABAN AKHIR]\n"
+                                "Isi jawaban teks di sini.\n"
+                                "3. Jangan berhenti sebelum menulis [JAWABAN AKHIR].\n\n"
+                                f"Referensi laporan:\n{laporan_text[:5000]}"
                             )
                         }
                     ] + [
                         {"role": r, "content": m}
-                        for r, m in st.session_state.chat_history
+                        for r, m in st.session_state.chat_history[-4:]  # ⬅️ BATASI HISTORY
                     ],
-                    max_completion_tokens=800
+                    max_completion_tokens=900
                 )
-                # st.write(response)
+
                 # ===============================
-                # AMBIL OUTPUT DENGAN FALLBACK
+                # AMBIL JAWABAN FINAL SAJA
                 # ===============================
-                if hasattr(response, "output_text") and response.output_text:
-                    answer = response.output_text
-                elif response.choices and response.choices[0].message:
-                    answer = response.choices[0].message.content
+                raw_answer = ""
+                if response.choices and response.choices[0].message:
+                    raw_answer = response.choices[0].message.content or ""
+
+                if "[JAWABAN AKHIR]" in raw_answer:
+                    answer = raw_answer.split("[JAWABAN AKHIR]", 1)[-1].strip()
                 else:
-                    answer = "⚠️ Model tidak mengembalikan teks jawaban."
+                    answer = (
+                        "⚠️ Model tidak menghasilkan bagian [JAWABAN AKHIR]. "
+                        "Silakan ulangi pertanyaan dengan konteks lebih spesifik."
+                    )
 
                 st.markdown(answer)
                 st.session_state.chat_history.append(("assistant", answer))
 
             except Exception as e:
                 st.error(f"⚠️ Terjadi error ChatGPT: {e}")
+
+
 
 
 
