@@ -306,6 +306,7 @@ if user_msg:
 
             except Exception as e:
                 st.error(f"⚠️ Terjadi error ChatGPT: {e}")
+st.write(response)
 
 
 
