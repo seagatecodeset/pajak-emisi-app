@@ -11,7 +11,7 @@ import os
 # ===============================
 # KONFIGURASI LLM (CHATGPT)
 # ===============================
-MODEL_LLM = "gpt-4.1-mini"  # 🔒 Stabil untuk chatbot UI (selalu keluar teks)
+MODEL_LLM = "gpt-4.1"  # 🔒 Stabil untuk chatbot UI (selalu keluar teks)
 
 api_key = st.secrets.get("OPENAI_API_KEY") or os.getenv("OPENAI_API_KEY")
 
@@ -288,8 +288,8 @@ if user_msg:
                         {"role": r, "content": m}
                         for r, m in st.session_state.chat_history[-6:]  # history aman diperpanjang
                     ],
-                    max_tokens=800,      # ✅ PARAMETER GPT-4
-                    temperature=0.2     # ✅ BOLEH di GPT-4
+                    max_tokens=700,      # ✅ PARAMETER GPT-4
+                    temperature=0.1     # ✅ BOLEH di GPT-4
                 )
 
                 answer = response.choices[0].message.content.strip()
@@ -298,6 +298,7 @@ if user_msg:
 
             except Exception as e:
                 st.error(f"⚠️ Terjadi error ChatGPT: {e}")
+
 
 
 
