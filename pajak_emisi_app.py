@@ -291,12 +291,13 @@ if user_msg:
                     max_completion_tokens=500  # ✅ SATU-SATUNYA PARAMETER WAJIB
                 )
 
-                answer = response.choices[0].message.content
+                answer = response.output_text
                 st.markdown(answer)
                 st.session_state.chat_history.append(("assistant", answer))
 
             except Exception as e:
                 st.error(f"⚠️ Terjadi error ChatGPT: {e}")
+
 
 
 
