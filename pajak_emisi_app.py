@@ -288,9 +288,9 @@ if user_msg:
                         {"role": r, "content": m}
                         for r, m in st.session_state.chat_history
                     ],
-                    max_completion_tokens=500
+                    max_completion_tokens=800
                 )
-                st.write(response)
+                # st.write(response)
                 # ===============================
                 # AMBIL OUTPUT DENGAN FALLBACK
                 # ===============================
@@ -306,6 +306,7 @@ if user_msg:
 
             except Exception as e:
                 st.error(f"⚠️ Terjadi error ChatGPT: {e}")
+
 
 
 
