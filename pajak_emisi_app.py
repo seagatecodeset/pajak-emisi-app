@@ -21,20 +21,6 @@ if not api_key:
 
 client = OpenAI(api_key=api_key)
 
-'''
-MODEL_LLM = "openai/gpt-4.1-mini"
-
-api_key = st.secrets.get("OPENROUTER_API_KEY") or os.getenv("OPENROUTER_API_KEY")
-
-if not api_key:
-    st.error("❌ OPENROUTER_API_KEY belum diset")
-    st.stop()
-
-client = OpenAI(
-    api_key=api_key,
-    base_url="https://openrouter.ai/api/v1"
-)
-'''
 # ===============================
 # LOAD & CACHE LAPORAN PDF
 # ===============================
@@ -312,6 +298,7 @@ if user_msg:
 
             except Exception as e:
                 st.error(f"⚠️ Terjadi error ChatGPT: {e}")
+
 
 
 
