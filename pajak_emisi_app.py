@@ -290,7 +290,7 @@ if user_msg:
                     ],
                     max_completion_tokens=500
                 )
-
+                st.write(response)
                 # ===============================
                 # AMBIL OUTPUT DENGAN FALLBACK
                 # ===============================
@@ -306,7 +306,8 @@ if user_msg:
 
             except Exception as e:
                 st.error(f"⚠️ Terjadi error ChatGPT: {e}")
-st.write(response)
+
+
 
 
 
