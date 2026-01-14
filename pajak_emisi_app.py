@@ -273,7 +273,7 @@ if user_msg:
         with st.spinner("🤖 Menganalisis regulasi dan laporan..."):
             try:
                 response = client.chat.completions.create(
-                    model=MODEL_LLM,
+                    model=MODEL_LLM,  # contoh: "gpt-5.2"
                     messages=[
                         {
                             "role": "system",
@@ -288,7 +288,7 @@ if user_msg:
                         {"role": r, "content": m}
                         for r, m in st.session_state.chat_history
                     ],
-                    max_completion_tokens=300
+                    max_completion_tokens=500  # ✅ SATU-SATUNYA PARAMETER WAJIB
                 )
 
                 answer = response.choices[0].message.content
@@ -297,6 +297,8 @@ if user_msg:
 
             except Exception as e:
                 st.error(f"⚠️ Terjadi error ChatGPT: {e}")
+
+
 
 
 
