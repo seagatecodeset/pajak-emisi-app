@@ -11,7 +11,7 @@ import os
 # ===============================
 # KONFIGURASI LLM (CHATGPT)
 # ===============================
-MODEL_LLM = "gpt-5.2"  # jika error, ganti ke "gpt-4.1" atau "gpt-4o"
+MODEL_LLM = "gpt-4.1"  # jika error, ganti ke "gpt-4.1" atau "gpt-4o"
 
 api_key = st.secrets.get("OPENAI_API_KEY") or os.getenv("OPENAI_API_KEY")
 
@@ -301,6 +301,7 @@ if user_msg:
 
             except Exception as e:
                 st.error(f"⚠️ Terjadi error ChatGPT: {e}")
+
 
 
 
