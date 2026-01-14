@@ -273,14 +273,14 @@ if user_msg:
         with st.spinner("🤖 Menganalisis regulasi dan laporan..."):
             try:
                 response = client.chat.completions.create(
-                    model=MODEL_LLM,  # "gpt-5.2"
+                    model=MODEL_LLM,  # contoh: "gpt-5.2"
                     messages=[
                         {
                             "role": "system",
                             "content": (
                                 "Anda adalah asisten ahli pajak emisi kendaraan bermotor Indonesia. "
                                 "Gunakan bahasa formal kebijakan publik. "
-                                "Jawaban HARUS berdasarkan regulasi Indonesia dan laporan berikut:\n\n"
+                                "Jawaban HARUS berdasarkan regulasi Indonesia dan laporan berikut.\n\n"
                                 f"{laporan_text[:7000]}"
                             )
                         }
@@ -291,14 +291,23 @@ if user_msg:
                     max_completion_tokens=500
                 )
 
-                # ✅ GPT-5 OUTPUT
-                answer = response.output_text
+                # ===============================
+                # AMBIL OUTPUT DENGAN FALLBACK
+                # ===============================
+                if hasattr(response, "output_text") and response.output_text:
+                    answer = response.output_text
+                elif response.choices and response.choices[0].message:
+                    answer = response.choices[0].message.content
+                else:
+                    answer = "⚠️ Model tidak mengembalikan teks jawaban."
 
                 st.markdown(answer)
                 st.session_state.chat_history.append(("assistant", answer))
 
             except Exception as e:
                 st.error(f"⚠️ Terjadi error ChatGPT: {e}")
+
+
 
 
 
