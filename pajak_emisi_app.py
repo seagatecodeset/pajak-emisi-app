@@ -281,7 +281,7 @@ if user_msg:
                                 "Anda adalah asisten ahli pajak emisi kendaraan bermotor Indonesia. "
                                 "Gunakan bahasa formal kebijakan publik. "
                                 "Jawaban HARUS berdasarkan regulasi Indonesia dan laporan berikut.\n\n"
-                                f"{laporan_text[:5000]}"
+                                f"{laporan_text[:1000000]}"
                             )
                         }
                     ] + [
@@ -298,6 +298,7 @@ if user_msg:
 
             except Exception as e:
                 st.error(f"⚠️ Terjadi error ChatGPT: {e}")
+
 
 
 
