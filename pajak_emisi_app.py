@@ -7,6 +7,9 @@ from openai import OpenAI
 from pypdf import PdfReader
 from datetime import datetime
 import os
+from reportlab.lib.pagesizes import A4
+from reportlab.pdfgen import canvas
+from reportlab.lib.units import cm
 
 # ===============================
 # KONFIGURASI LLM (CHATGPT)
@@ -96,6 +99,54 @@ def kategori_emisi(jenis):
         return "Roda Dua"
     else:
         return "Bensin"
+
+def simpan_pdf_hasil(data):
+    os.makedirs("output_pdf", exist_ok=True)
+
+    filename = f"output_pdf/Simulasi_PKB_Emisi_{datetime.now().strftime('%Y%m%d_%H%M%S')}.pdf"
+    c = canvas.Canvas(filename, pagesize=A4)
+    width, height = A4
+
+    y = height - 2 * cm
+
+    def draw(text):
+        nonlocal y
+        c.drawString(2 * cm, y, text)
+        y -= 14
+
+    c.setFont("Helvetica-Bold", 14)
+    draw("HASIL SIMULASI PAJAK EMISI KENDARAAN BERMOTOR")
+    y -= 10
+
+    c.setFont("Helvetica", 10)
+    draw(f"Tanggal Simulasi : {datetime.now().strftime('%d-%m-%Y %H:%M:%S')}")
+    draw(f"Jenis Kendaraan  : {data['jenis']}")
+    draw(f"Tahun Kendaraan  : {data['tahun']}")
+    draw(f"Usia Kendaraan   : {data['usia']} tahun")
+    draw(f"Kategori Emisi   : {data['kategori']}")
+    y -= 10
+
+    draw(f"Nilai NJKB       : Rp {data['njkb']:,.0f}")
+    draw(f"Tarif Pajak      : {data['tarif']} %")
+    draw(f"KD               : {data['kd']}")
+    draw(f"Alfa (α)         : {data['alfa']}")
+    draw(f"Faktor Usia      : {data['faktor_usia']}")
+    y -= 10
+
+    draw(f"Rasio Emisi      : {data['rasio']:.3f}")
+    draw(f"Koefisien Emisi  : {data['ke']:.4f}")
+    draw(f"Status Emisi    : {data['status']}")
+    y -= 10
+
+    c.setFont("Helvetica-Bold", 11)
+    draw(f"PKB Dasar        : Rp {data['pkb_dasar']:,.0f}")
+    draw(f"PKB Emisi        : Rp {data['pkb_emisi']:,.0f}")
+    draw(f"Selisih PKB      : Rp {data['selisih']:,.0f}")
+
+    c.showPage()
+    c.save()
+
+    return filename
 
 # -------------------------------
 # Streamlit UI
@@ -248,6 +299,27 @@ if st.button("🔍 Simulasikan PKB Emisi"):
     - KE = α × (Rasio Emisi − 1) × Faktor Usia  
     """)
 
+    st.session_state.hasil_simulasi = {
+    "jenis": jenis,
+    "tahun": tahun,
+    "usia": usia,
+    "kategori": kategori,
+    "njkb": njkb,
+    "tarif": tarif_pajak,
+    "kd": kd,
+    "alfa": alfa,
+    "faktor_usia": faktor_usia,
+    "rasio": rasio_emisi,
+    "ke": ke,
+    "status": status_emisi,
+    "pkb_dasar": pkb_dasar,
+    "pkb_emisi": pkb_emisi,
+    "selisih": selisih
+    }
+if "hasil_simulasi" in st.session_state:
+    if st.button("📄 Simpan Hasil Simulasi ke PDF"):
+        file_pdf = simpan_pdf_hasil(st.session_state.hasil_simulasi)
+        st.success(f"✅ PDF berhasil disimpan: {file_pdf}")
 # ===============================
 # CHATBOT CHATGPT (GPT-4.1-mini)
 # ===============================
@@ -298,6 +370,7 @@ if user_msg:
 
             except Exception as e:
                 st.error(f"⚠️ Terjadi error ChatGPT: {e}")
+
 
 
 
