@@ -10,6 +10,7 @@ import os
 from reportlab.lib.pagesizes import A4
 from reportlab.pdfgen import canvas
 from reportlab.lib.units import cm
+from io import BytesIO
 
 # ===============================
 # KONFIGURASI LLM (CHATGPT)
@@ -100,11 +101,9 @@ def kategori_emisi(jenis):
     else:
         return "Bensin"
 
-def simpan_pdf_hasil(data):
-    os.makedirs("output_pdf", exist_ok=True)
-
-    filename = f"output_pdf/Simulasi_PKB_Emisi_{datetime.now().strftime('%Y%m%d_%H%M%S')}.pdf"
-    c = canvas.Canvas(filename, pagesize=A4)
+def generate_pdf_bytes(data):
+    buffer = BytesIO()
+    c = canvas.Canvas(buffer, pagesize=A4)
     width, height = A4
 
     y = height - 2 * cm
@@ -126,10 +125,10 @@ def simpan_pdf_hasil(data):
     draw(f"Kategori Emisi   : {data['kategori']}")
     y -= 10
 
-    draw(f"Nilai NJKB       : Rp {data['njkb']:,.0f}")
+    draw(f"NJKB             : Rp {data['njkb']:,.0f}")
     draw(f"Tarif Pajak      : {data['tarif']} %")
     draw(f"KD               : {data['kd']}")
-    draw(f"Alfa (α)         : {data['alfa']}")
+    draw(f"Nilai Alfa (α)   : {data['alfa']}")
     draw(f"Faktor Usia      : {data['faktor_usia']}")
     y -= 10
 
@@ -146,7 +145,8 @@ def simpan_pdf_hasil(data):
     c.showPage()
     c.save()
 
-    return filename
+    buffer.seek(0)
+    return buffer
 
 # -------------------------------
 # Streamlit UI
@@ -317,9 +317,14 @@ if st.button("🔍 Simulasikan PKB Emisi"):
     "selisih": selisih
     }
 if "hasil_simulasi" in st.session_state:
-    if st.button("📄 Simpan Hasil Simulasi ke PDF"):
-        file_pdf = simpan_pdf_hasil(st.session_state.hasil_simulasi)
-        st.success(f"✅ PDF berhasil disimpan: {file_pdf}")
+    pdf_bytes = generate_pdf_bytes(st.session_state.hasil_simulasi)
+
+    st.download_button(
+        label="📄 Download Hasil Simulasi (PDF)",
+        data=pdf_bytes,
+        file_name=f"Simulasi_PKB_Emisi_{datetime.now().strftime('%Y%m%d_%H%M%S')}.pdf",
+        mime="application/pdf"
+    )
 # ===============================
 # CHATBOT CHATGPT (GPT-4.1-mini)
 # ===============================
@@ -370,6 +375,7 @@ if user_msg:
 
             except Exception as e:
                 st.error(f"⚠️ Terjadi error ChatGPT: {e}")
+
 
 
 
