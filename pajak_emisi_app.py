@@ -114,7 +114,7 @@ def generate_pdf_bytes(data):
         y -= 14
 
     c.setFont("Helvetica-Bold", 14)
-    draw("HASIL SIMULASI PAJAK EMISI KENDARAAN BERMOTOR")
+    draw("HASIL PAJAK EMISI KENDARAAN BERMOTOR")
     y -= 10
 
     c.setFont("Helvetica", 10)
@@ -375,6 +375,7 @@ if user_msg:
 
             except Exception as e:
                 st.error(f"⚠️ Terjadi error ChatGPT: {e}")
+
 
 
 
