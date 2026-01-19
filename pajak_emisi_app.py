@@ -151,7 +151,7 @@ def generate_pdf_bytes(data):
 # -------------------------------
 # Streamlit UI
 # -------------------------------
-st.title("🚗 Simulasi Pajak Emisi Kendaraan Bermotor")
+st.title("🚗 Aplikasi Pajak Emisi Kendaraan Bermotor")
 st.caption("Berdasarkan **Permendagri No. 7 Tahun 2025** dan **PERMEN LHK No. 8 Tahun 2023**")
 
 # 1. Jenis Kendaraan
@@ -375,6 +375,7 @@ if user_msg:
 
             except Exception as e:
                 st.error(f"⚠️ Terjadi error ChatGPT: {e}")
+
 
 
 
