@@ -37,7 +37,7 @@ def load_pdf_text(path):
             text += page.extract_text() + "\n"
     return text
 
-laporan_text = load_pdf_text("laporan Akhir KPL DLH JKT.pdf")
+laporan_text = load_pdf_text("ringkasa_laporan.pdf")
 
 # -------------------------------
 # Data Baku Mutu Emisi
@@ -375,6 +375,7 @@ if user_msg:
 
             except Exception as e:
                 st.error(f"⚠️ Terjadi error ChatGPT: {e}")
+
 
 
 
