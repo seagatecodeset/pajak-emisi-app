@@ -126,7 +126,20 @@ def generate_pdf_bytes(data):
     draw(f"Usia Kendaraan   : {data['usia']} tahun")
     draw(f"Kategori Emisi   : {data['kategori']}")
     y -= 10
+    # ===============================
+    # HASIL UJI EMISI
+    # ===============================
+    c.setFont("Helvetica-Bold", 11)
+    draw("Hasil Uji Emisi Kendaraan")
 
+    c.setFont("Helvetica", 10)
+
+    if data["kategori"] == "Diesel":
+        draw(f"Opasitas        : {data['hasil_emisi'].get('Opasitas', 0)} %")
+    else:
+        draw(f"CO              : {data['hasil_emisi'].get('CO', 0)} %")
+        draw(f"HC              : {data['hasil_emisi'].get('HC', 0)} ppm")
+    y -= 10
     draw(f"NJKB             : Rp {data['njkb']:,.0f}")
     draw(f"Tarif Pajak      : {data['tarif']} %")
     draw(f"KD               : {data['kd']}")
@@ -322,6 +335,7 @@ if st.button("🔍 Simulasikan PKB Emisi"):
     "tahun": tahun,
     "usia": usia,
     "kategori": kategori,
+    "hasil_emisi": hasil_emisi,
     "njkb": njkb,
     "tarif": tarif_pajak,
     "kd": kd,
@@ -393,6 +407,7 @@ if user_msg:
 
             except Exception as e:
                 st.error(f"⚠️ Terjadi error ChatGPT: {e}")
+
 
 
 
