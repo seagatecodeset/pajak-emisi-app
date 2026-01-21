@@ -131,14 +131,16 @@ def generate_pdf_bytes(data):
     # ===============================
     c.setFont("Helvetica-Bold", 11)
     draw("Hasil Uji Emisi Kendaraan")
-
     c.setFont("Helvetica", 10)
 
-    if data["kategori"] == "Diesel":
-        draw(f"Opasitas        : {data['hasil_emisi'].get('Opasitas', 0)} %")
+    hasil_emisi = data.get("hasil_emisi", {})  # ✅ AMAN
+
+    if data.get("kategori") == "Diesel":
+        draw(f"Opasitas        : {hasil_emisi.get('Opasitas', '-')} %")
     else:
-        draw(f"CO              : {data['hasil_emisi'].get('CO', 0)} %")
-        draw(f"HC              : {data['hasil_emisi'].get('HC', 0)} ppm")
+        draw(f"CO              : {hasil_emisi.get('CO', '-')} %")
+        draw(f"HC              : {hasil_emisi.get('HC', '-')} ppm")
+
     y -= 10
     draw(f"NJKB             : Rp {data['njkb']:,.0f}")
     draw(f"Tarif Pajak      : {data['tarif']} %")
@@ -407,6 +409,7 @@ if user_msg:
 
             except Exception as e:
                 st.error(f"⚠️ Terjadi error ChatGPT: {e}")
+
 
 
 
