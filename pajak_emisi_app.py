@@ -120,6 +120,8 @@ def generate_pdf_bytes(data):
     c.setFont("Helvetica", 10)
     draw(f"Tanggal Simulasi : {datetime.now().strftime('%d-%m-%Y %H:%M:%S')}")
     draw(f"Jenis Kendaraan  : {data['jenis']}")
+    draw(f"Merk Kendaraan  : {data.get('merk', '-')}")
+    draw(f"Tipe Kendaraan  : {data.get('tipe', '-')}")
     draw(f"Tahun Kendaraan  : {data['tahun']}")
     draw(f"Usia Kendaraan   : {data['usia']} tahun")
     draw(f"Kategori Emisi   : {data['kategori']}")
@@ -158,6 +160,19 @@ st.caption("Berdasarkan **Permendagri No. 7 Tahun 2025** dan **PERMEN LHK No. 8 
 jenis = st.selectbox(
     "Pilih Jenis Kendaraan:",
     list(default_alfa.keys())
+)
+
+# 1a. Identitas Kendaraan (input bebas)
+st.markdown("### 🏷️ Identitas Kendaraan")
+
+merk_kendaraan = st.text_input(
+    "Merk Kendaraan:",
+    placeholder="Contoh: Toyota, Honda, Yamaha, Mitsubishi"
+)
+
+tipe_kendaraan = st.text_input(
+    "Tipe / Model Kendaraan:",
+    placeholder="Contoh: Avanza 1.5, CRF 150L, Pajero Sport"
 )
 
 # 2. Tahun Kendaraan
@@ -219,7 +234,8 @@ tarif_pajak = st.number_input("Tarif Pajak Daerah (%):", min_value=0.0, value=2.
 # SIMULASI
 # -------------------------------
 if st.button("🔍 Simulasikan PKB Emisi"):
-
+    if not merk_kendaraan or not tipe_kendaraan:
+        st.warning("⚠️ Merk dan tipe kendaraan sebaiknya diisi untuk identifikasi laporan.")
     # Hitung usia kendaraan
     from datetime import datetime
     tahun_now = datetime.now().year
@@ -301,6 +317,8 @@ if st.button("🔍 Simulasikan PKB Emisi"):
 
     st.session_state.hasil_simulasi = {
     "jenis": jenis,
+    "merk": merk_kendaraan,
+    "tipe": tipe_kendaraan,
     "tahun": tahun,
     "usia": usia,
     "kategori": kategori,
@@ -375,6 +393,7 @@ if user_msg:
 
             except Exception as e:
                 st.error(f"⚠️ Terjadi error ChatGPT: {e}")
+
 
 
 
