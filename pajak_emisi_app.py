@@ -1,7 +1,10 @@
+```python
 # ==========================================
 # Aplikasi Simulasi Pajak Emisi Kendaraan Bermotor
 # Berdasarkan Permendagri No. 7 Tahun 2025
+# dan PERMEN LHK No. 8 Tahun 2023
 # ==========================================
+
 import streamlit as st
 from openai import OpenAI
 from pypdf import PdfReader
@@ -13,9 +16,10 @@ from reportlab.lib.units import cm
 from io import BytesIO
 
 # ===============================
-# KONFIGURASI LLM (CHATGPT)
+# KONFIGURASI LLM / CHATBOT
 # ===============================
-MODEL_LLM = "gpt-4.1"  # 🔒 Stabil untuk chatbot UI (selalu keluar teks)
+
+MODEL_LLM = "gpt-4.1"
 
 api_key = st.secrets.get("OPENAI_API_KEY") or os.getenv("OPENAI_API_KEY")
 
@@ -28,78 +32,230 @@ client = OpenAI(api_key=api_key)
 # ===============================
 # LOAD & CACHE LAPORAN PDF
 # ===============================
+
 @st.cache_data(show_spinner=False)
 def load_pdf_text(path):
     reader = PdfReader(path)
     text = ""
     for page in reader.pages:
-        if page.extract_text():
-            text += page.extract_text() + "\n"
+        extracted = page.extract_text()
+        if extracted:
+            text += extracted + "\n"
     return text
 
-laporan_text = load_pdf_text("ringkasa_laporan.pdf")
+
+try:
+    laporan_text = load_pdf_text("ringkasa_laporan.pdf")
+except Exception:
+    laporan_text = ""
+    st.warning("⚠️ File ringkasa_laporan.pdf tidak ditemukan atau belum dapat dibaca. Chatbot tetap berjalan, tetapi tanpa konteks laporan PDF.")
+
+# ===============================
+# DATA BAKU MUTU EMISI
+# ===============================
 
 # -------------------------------
-# Data Baku Mutu Emisi
+# Bensin - Sepeda Motor
 # -------------------------------
-baku_mutu = {
-    "Diesel": {
+# Untuk sepeda motor:
+# - Tahun < 2010 dibedakan menjadi 2-langkah dan 4-langkah
+# - Tahun 2010 ke atas tidak dibedakan lagi 2-langkah/4-langkah
+
+baku_mutu_bensin_motor = {
+    "<2010": {
+        "2-langkah": {"CO": 4.5, "HC": 6000},
+        "4-langkah": {"CO": 5.5, "HC": 2200}
+    },
+    "2010–2016": {"CO": 4.0, "HC": 1800},
+    ">2016": {"CO": 3.0, "HC": 1000}
+}
+
+# -------------------------------
+# Bensin - Kategori M
+# -------------------------------
+# Digunakan untuk klasifikasi B dan C
+
+baku_mutu_bensin_m = {
+    "<2007": {"CO": 4.0, "HC": 1000},
+    "2007–2018": {"CO": 1.0, "HC": 150},
+    ">2018": {"CO": 0.5, "HC": 100}
+}
+
+# -------------------------------
+# Bensin - Kategori N dan O
+# -------------------------------
+# Digunakan untuk klasifikasi D
+
+baku_mutu_bensin_no = {
+    "<2007": {"CO": 4.0, "HC": 1100},
+    "2007–2018": {"CO": 1.0, "HC": 200},
+    ">2018": {"CO": 0.5, "HC": 150}
+}
+
+# -------------------------------
+# Diesel - Berdasarkan JBB
+# -------------------------------
+
+baku_mutu_diesel = {
+    "<= 3.5 ton": {
         "<2010": 65,
         "2010–2021": 40,
         ">2021": 30
     },
-    "Bensin": {
-        "<2010": {"CO": 4, "HC": 1000},
-        "2010–2021": {"CO": 1, "HC": 150},
-        ">2021": {"CO": 0.5, "HC": 100}
-    },
-    "Roda Dua": {
-        "<2010": {"CO": 5.5, "HC": 2200},
-        "2010–2016": {"CO": 4, "HC": 1800},
-        ">2016": {"CO": 3, "HC": 1000}
+    "> 3.5 ton": {
+        "<2010": 65,
+        "2010–2021": 40,
+        ">2021": 35
     }
 }
 
-# -------------------------------
-# Default Nilai Alfa (editable)
-# -------------------------------
-default_alfa = {
-    "Motor 2-tak": 0.3,
-    "Motor 4-tak": 0.1,
-    "Sedan/MPV Euro 2": 0.2,
-    "Sedan/MPV Euro 4": 0.1,
-    "SUV/Jeep": 0.25,
-    "Truk/Bis Euro 2": 0.4,
-    "Truk/Bis Euro 4": 0.2,
-    "Niaga Ringan": 0.3,
-    "CNG": 0.1
-}
+# ===============================
+# NILAI KD BERDASARKAN KLASIFIKASI
+# ===============================
 
-# -------------------------------
-# Nilai KD (Koefisien Dasar)
-# -------------------------------
 nilai_KD = {
-    "Motor 2-tak": 1.0,
-    "Motor 4-tak": 1.0,
-    "Sedan/MPV Euro 2": 1.025,
-    "Sedan/MPV Euro 4": 1.025,
-    "SUV/Jeep": 1.05,
-    "Truk/Bis Euro 2": 1.1,
-    "Truk/Bis Euro 4": 1.1,
-    "Niaga Ringan": 1.085,
-    "CNG": 1.025
+    "A": 1.000,
+    "B": 1.025,
+    "C": 1.050,
+    "D": 1.085,
+    "E": 1.100,
+    "F": 1.300,
+    "G": 1.400
 }
 
-# -------------------------------
-# Fungsi bantu
-# -------------------------------
-def kategori_emisi(jenis):
-    if jenis in ["Truk/Bis Euro 2", "Truk/Bis Euro 4", "Niaga Ringan"]:
-        return "Diesel"
-    elif jenis in ["Motor 2-tak", "Motor 4-tak"]:
-        return "Roda Dua"
+# ===============================
+# KETERANGAN KLASIFIKASI
+# ===============================
+
+keterangan_bensin = """
+**Keterangan Klasifikasi Kendaraan Bensin:**
+
+- **A**: Motor, scooter, bajaj roda tiga penumpang  
+- **B**: Sedan / 4–5 penumpang, city car  
+- **C**: SUV, MPV 7 penumpang, jeep, minibus  
+- **D**: Blind van, pick-up, pick-up box, mikrobus  
+"""
+
+keterangan_diesel = """
+**Keterangan Klasifikasi Kendaraan Diesel:**
+
+- **C**: SUV, MPV 7 penumpang, jeep, minibus  
+- **D**: Blind van, pick-up, pick-up box, mikrobus  
+- **E**: Bus sedang dan besar, angkutan umum  
+- **F**: Truk kecil, light truck, engkel  
+- **G**: Truk besar, tronton, trailer  
+"""
+
+# ===============================
+# FUNGSI BANTU
+# ===============================
+
+def tentukan_periode_motor(tahun):
+    if tahun < 2010:
+        return "<2010"
+    elif tahun <= 2016:
+        return "2010–2016"
     else:
-        return "Bensin"
+        return ">2016"
+
+
+def tentukan_periode_bensin_non_motor(tahun):
+    if tahun < 2007:
+        return "<2007"
+    elif tahun <= 2018:
+        return "2007–2018"
+    else:
+        return ">2018"
+
+
+def tentukan_periode_diesel(tahun):
+    if tahun < 2010:
+        return "<2010"
+    elif tahun <= 2021:
+        return "2010–2021"
+    else:
+        return ">2021"
+
+
+def ambil_baku_mutu(bahan_bakar, klasifikasi, tahun, tipe_motor=None, jbb=None):
+    """
+    Fungsi untuk mengambil nilai baku mutu emisi berdasarkan:
+    - bahan bakar / jenis mesin
+    - klasifikasi kendaraan
+    - tahun pembuatan
+    - tipe motor khusus sepeda motor <2010
+    - JBB khusus diesel
+
+    Return:
+    - baku mutu
+    - periode baku mutu
+    - kategori baku mutu
+    - metode uji
+    """
+
+    if bahan_bakar == "Bensin":
+        metode_uji = "Kondisi diam (Idle)"
+
+        # Klasifikasi A = sepeda motor
+        if klasifikasi == "A":
+            periode = tentukan_periode_motor(tahun)
+
+            if periode == "<2010":
+                if tipe_motor is None:
+                    return None, None, None, None
+
+                baku = baku_mutu_bensin_motor["<2010"][tipe_motor]
+                kategori_baku = f"Sepeda motor {tipe_motor}"
+
+            else:
+                baku = baku_mutu_bensin_motor[periode]
+                kategori_baku = "Sepeda motor"
+
+            return baku, periode, kategori_baku, metode_uji
+
+        # Klasifikasi B dan C = Kategori M
+        elif klasifikasi in ["B", "C"]:
+            periode = tentukan_periode_bensin_non_motor(tahun)
+            baku = baku_mutu_bensin_m[periode]
+            kategori_baku = "Kategori M"
+            return baku, periode, kategori_baku, metode_uji
+
+        # Klasifikasi D = Kategori N dan O
+        elif klasifikasi == "D":
+            periode = tentukan_periode_bensin_non_motor(tahun)
+            baku = baku_mutu_bensin_no[periode]
+            kategori_baku = "Kategori N dan O"
+            return baku, periode, kategori_baku, metode_uji
+
+    elif bahan_bakar == "Diesel":
+        metode_uji = "Percepatan bebas"
+
+        if jbb is None:
+            return None, None, None, None
+
+        periode = tentukan_periode_diesel(tahun)
+        baku = baku_mutu_diesel[jbb][periode]
+        kategori_baku = f"Diesel dengan JBB {jbb}"
+        return baku, periode, kategori_baku, metode_uji
+
+    return None, None, None, None
+
+
+def parse_rupiah(nilai_str):
+    """
+    Mengubah input rupiah seperti:
+    15,000,000 atau 15.000.000 menjadi float 15000000
+    """
+    return float(nilai_str.replace(",", "").replace(".", "").strip())
+
+
+def parse_float(nilai_str):
+    """
+    Mengubah angka desimal user.
+    Mendukung input 0.2 atau 0,2
+    """
+    return float(nilai_str.replace(",", ".").strip())
+
 
 def generate_pdf_bytes(data):
     buffer = BytesIO()
@@ -114,50 +270,70 @@ def generate_pdf_bytes(data):
         y -= 14
 
     c.setFont("Helvetica-Bold", 14)
-    draw("HASIL PAJAK EMISI KENDARAAN BERMOTOR")
+    draw("HASIL SIMULASI PAJAK EMISI KENDARAAN BERMOTOR")
     y -= 10
 
     c.setFont("Helvetica", 10)
-    draw(f"Tanggal Simulasi : {datetime.now().strftime('%d-%m-%Y %H:%M:%S')}")
-    draw(f"Jenis Kendaraan  : {data['jenis']}")
-    draw(f"Merk Kendaraan  : {data.get('merk', '-')}")
-    draw(f"Tipe Kendaraan  : {data.get('tipe', '-')}")
-    draw(f"Tahun Kendaraan  : {data['tahun']}")
-    draw(f"Usia Kendaraan   : {data['usia']} tahun")
-    draw(f"Kategori Emisi   : {data['kategori']}")
+    draw(f"Tanggal Simulasi              : {datetime.now().strftime('%d-%m-%Y %H:%M:%S')}")
+    draw(f"Bahan Bakar/Jenis Mesin       : {data['bahan_bakar']}")
+    draw(f"Klasifikasi Kendaraan         : {data['klasifikasi']}")
+    draw(f"Merk Kendaraan                : {data.get('merk', '-')}")
+    draw(f"Tipe/Model Kendaraan          : {data.get('tipe', '-')}")
+    draw(f"Tahun Kendaraan               : {data['tahun']}")
+    draw(f"Usia Kendaraan                : {data['usia']} tahun")
+
+    if data.get("tipe_motor"):
+        draw(f"Tipe Sepeda Motor             : {data['tipe_motor']}")
+
+    if data.get("jbb"):
+        draw(f"JBB                           : {data['jbb']}")
+
+    draw(f"Periode Baku Mutu             : {data['periode_baku']}")
+    draw(f"Kategori Baku Mutu            : {data['kategori_baku']}")
+    draw(f"Metode Uji                    : {data['metode_uji']}")
     y -= 10
-    # ===============================
-    # HASIL UJI EMISI
-    # ===============================
+
     c.setFont("Helvetica-Bold", 11)
     draw("Hasil Uji Emisi Kendaraan")
     c.setFont("Helvetica", 10)
 
-    hasil_emisi = data.get("hasil_emisi", {})  # ✅ AMAN
+    hasil_emisi = data.get("hasil_emisi", {})
 
-    if data.get("kategori") == "Diesel":
-        draw(f"Opasitas        : {hasil_emisi.get('Opasitas', '-')} %")
+    if data["bahan_bakar"] == "Diesel":
+        draw(f"Opasitas                      : {hasil_emisi.get('Opasitas', '-')} %")
+        draw(f"Baku Mutu Opasitas            : {data.get('baku_opasitas', '-')} % HSU")
     else:
-        draw(f"CO              : {hasil_emisi.get('CO', '-')} %")
-        draw(f"HC              : {hasil_emisi.get('HC', '-')} ppm")
+        draw(f"CO                            : {hasil_emisi.get('CO', '-')} %")
+        draw(f"HC                            : {hasil_emisi.get('HC', '-')} ppm")
+        draw(f"Baku Mutu CO                  : {data.get('baku_co', '-')} %")
+        draw(f"Baku Mutu HC                  : {data.get('baku_hc', '-')} ppm")
 
     y -= 10
-    draw(f"NJKB             : Rp {data['njkb']:,.0f}")
-    draw(f"Tarif Pajak      : {data['tarif']} %")
-    draw(f"KD               : {data['kd']}")
-    draw(f"Nilai Alfa (α)   : {data['alfa']}")
-    draw(f"Faktor Usia      : {data['faktor_usia']}")
+    draw(f"NJKB                          : Rp {data['njkb']:,.0f}")
+    draw(f"Tarif Pajak Daerah            : {data['tarif']} %")
+    draw(f"KD                            : {data['kd']}")
+    draw(f"Nilai Alfa (α)                : {data['alfa']}")
+    draw(f"Faktor Usia                   : {data['faktor_usia']}")
     y -= 10
 
-    draw(f"Rasio Emisi      : {data['rasio']:.3f}")
-    draw(f"Koefisien Emisi  : {data['ke']:.4f}")
-    draw(f"Status Emisi    : {data['status']}")
+    draw(f"Rasio Emisi                   : {data['rasio']:.3f}")
+    draw(f"Koefisien Emisi (KE)          : {data['ke']:.4f}")
+    draw(f"Status Emisi                  : {data['status_plain']}")
     y -= 10
 
     c.setFont("Helvetica-Bold", 11)
-    draw(f"PKB Dasar        : Rp {data['pkb_dasar']:,.0f}")
-    draw(f"PKB Emisi        : Rp {data['pkb_emisi']:,.0f}")
-    draw(f"Selisih PKB      : Rp {data['selisih']:,.0f}")
+    draw(f"PKB Dasar                     : Rp {data['pkb_dasar']:,.0f}")
+    draw(f"PKB Emisi                     : Rp {data['pkb_emisi']:,.0f}")
+    draw(f"Selisih PKB                   : Rp {data['selisih']:,.0f}")
+    draw(f"Kenaikan PKB                  : {data['persen_kenaikan']:.2f} %")
+
+    y -= 20
+    c.setFont("Helvetica", 9)
+    draw("Rumus:")
+    draw("DP PKB = NJKB x Tarif Pajak Daerah")
+    draw("PKB Dasar = DP PKB x KD")
+    draw("PKB Emisi = DP PKB x (KD + KE)")
+    draw("KE = α x (Rasio Emisi - 1) x Faktor Usia")
 
     c.showPage()
     c.save()
@@ -165,19 +341,53 @@ def generate_pdf_bytes(data):
     buffer.seek(0)
     return buffer
 
-# -------------------------------
-# Streamlit UI
-# -------------------------------
+# ===============================
+# STREAMLIT UI
+# ===============================
+
 st.title("🚗 Aplikasi Pajak Emisi Kendaraan Bermotor")
 st.caption("Berdasarkan **Permendagri No. 7 Tahun 2025** dan **PERMEN LHK No. 8 Tahun 2023**")
 
-# 1. Jenis Kendaraan
-jenis = st.selectbox(
-    "Pilih Jenis Kendaraan:",
-    list(default_alfa.keys())
+# -------------------------------
+# 1. Pemilihan Bahan Bakar / Jenis Mesin
+# -------------------------------
+
+bahan_bakar = st.selectbox(
+    "Pemilihan Bahan Bakar/Jenis Mesin :",
+    ["Bensin", "Diesel"]
 )
 
-# 1a. Identitas Kendaraan (input bebas)
+# -------------------------------
+# 2. Jenis Klasifikasi Kendaraan
+# -------------------------------
+
+if bahan_bakar == "Bensin":
+    klasifikasi = st.selectbox(
+        "Jenis Klasifikasi Kendaraan :",
+        ["A", "B", "C", "D"]
+    )
+
+    st.markdown(keterangan_bensin)
+
+    jbb = None
+
+else:
+    klasifikasi = st.selectbox(
+        "Jenis Klasifikasi Kendaraan :",
+        ["C", "D", "E", "F", "G"]
+    )
+
+    st.markdown(keterangan_diesel)
+
+    jbb = st.selectbox(
+        "Jumlah Berat yang diperbolehkan/JBB :",
+        ["<= 3.5 ton", "> 3.5 ton"]
+    )
+
+# -------------------------------
+# 3. Identitas Kendaraan
+# -------------------------------
+
 st.markdown("### 🏷️ Identitas Kendaraan")
 
 merk_kendaraan = st.text_input(
@@ -190,138 +400,306 @@ tipe_kendaraan = st.text_input(
     placeholder="Contoh: Avanza 1.5, CRF 150L, Pajero Sport"
 )
 
-# 2. Tahun Kendaraan
-tahun = st.number_input("Masukkan Tahun Kendaraan:", min_value=1980, max_value=2025, value=2020)
+# -------------------------------
+# 4. Tahun Kendaraan
+# -------------------------------
 
-# Tentukan periode baku mutu
-if tahun < 2010:
-    periode = "<2010"
-elif tahun <= 2021:
-    periode = "2010–2021"
-else:
-    periode = ">2021"
+tahun_sekarang = datetime.now().year
 
-# 3. Hasil Uji Emisi
-kategori = kategori_emisi(jenis)
-st.subheader("Hasil Nilai Ukur Emisi")
-
-if kategori == "Diesel":
-    opasitas = st.number_input("Opasitas (%)", min_value=0.0, value=40.0)
-    hasil_emisi = {"Opasitas": opasitas}
-else:
-    co = st.number_input("CO (%)", min_value=0.0, value=1.0)
-    hc = st.number_input("HC (ppm)", min_value=0.0, value=150.0)
-    hasil_emisi = {"CO": co, "HC": hc}
-
-# 4. Nilai Alfa (dapat diedit user)
-st.markdown("### ⚙️ Pengaturan Lanjutan")
-alfa = st.number_input(
-    f"Nilai Alfa (α) untuk {jenis}:",
-    min_value=0.0,
-    max_value=1.0,
-    value=default_alfa[jenis],
-    step=0.01
+tahun = st.number_input(
+    "Masukkan Tahun Kendaraan:",
+    min_value=1980,
+    max_value=tahun_sekarang,
+    value=min(2020, tahun_sekarang)
 )
 
-# Tambahkan Opsi: Menggunakan Faktor Usia atau Tidak
+# -------------------------------
+# 5. Tipe Sepeda Motor
+# -------------------------------
+# Hanya muncul untuk:
+# Bensin + Klasifikasi A + Tahun < 2010
+
+tipe_motor = None
+
+if bahan_bakar == "Bensin" and klasifikasi == "A":
+    if tahun < 2010:
+        tipe_motor = st.selectbox(
+            "Tipe Sepeda Motor :",
+            ["2-langkah", "4-langkah"]
+        )
+        st.caption("Untuk sepeda motor dengan tahun pembuatan < 2010, baku mutu dibedakan menjadi 2-langkah dan 4-langkah.")
+    else:
+        st.info("Sepeda motor tahun 2010 ke atas tidak dibedakan menjadi 2-langkah atau 4-langkah dalam baku mutu emisi.")
+
+# -------------------------------
+# 6. Hasil Uji Emisi
+# -------------------------------
+
+st.subheader("Hasil Nilai Ukur Emisi")
+
+if bahan_bakar == "Diesel":
+    opasitas = st.number_input(
+        "Opasitas (%)",
+        min_value=0.0,
+        value=40.0
+    )
+
+    hasil_emisi = {
+        "Opasitas": opasitas
+    }
+
+else:
+    co = st.number_input(
+        "CO (%)",
+        min_value=0.0,
+        value=1.0
+    )
+
+    hc = st.number_input(
+        "HC (ppm)",
+        min_value=0.0,
+        value=150.0
+    )
+
+    hasil_emisi = {
+        "CO": co,
+        "HC": hc
+    }
+
+# -------------------------------
+# 7. Nilai Alfa
+# -------------------------------
+
+st.markdown("### ⚙️ Pengaturan Lanjutan")
+
+alfa_input = st.text_input(
+    "Nilai Alfa (α):",
+    placeholder="Contoh: 0.2"
+)
+
 use_fusia = st.radio(
     "Gunakan Faktor Usia dalam Perhitungan KE?",
     ("Ya, gunakan faktor usia", "Tidak, tanpa faktor usia")
 )
 
-# 5. Nilai Jual Kendaraan
+# -------------------------------
+# 8. NJKB
+# -------------------------------
+
 st.markdown("### 💰 Nilai Jual Kendaraan Bermotor (NJKB)")
+
 njkb_str = st.text_input(
     "Masukkan Nilai Jual Kendaraan (Rp):",
     value="15,000,000"
 )
 
-try:
-    njkb = float(njkb_str.replace(",", "").replace(".", ""))
-except ValueError:
-    st.error("⚠️ Format angka tidak valid! Gunakan koma atau titik untuk pemisah ribuan.")
-    st.stop()
-
-# 6. Tarif Pajak Daerah
-tarif_pajak = st.number_input("Tarif Pajak Daerah (%):", min_value=0.0, value=2.0)
-
 # -------------------------------
+# 9. Tarif Pajak Daerah
+# -------------------------------
+
+tarif_pajak = st.number_input(
+    "Tarif Pajak Daerah (%):",
+    min_value=0.0,
+    value=2.0
+)
+
+# ===============================
 # SIMULASI
-# -------------------------------
+# ===============================
+
 if st.button("🔍 Simulasikan PKB Emisi"):
+
+    # Validasi alfa
+    if not alfa_input.strip():
+        st.error("⚠️ Nilai Alfa (α) wajib diisi.")
+        st.stop()
+
+    try:
+        alfa = parse_float(alfa_input)
+    except ValueError:
+        st.error("⚠️ Nilai Alfa (α) tidak valid. Contoh input yang benar: 0.2 atau 0,2")
+        st.stop()
+
+    if alfa < 0:
+        st.error("⚠️ Nilai Alfa (α) tidak boleh negatif.")
+        st.stop()
+
+    # Validasi NJKB
+    try:
+        njkb = parse_rupiah(njkb_str)
+    except ValueError:
+        st.error("⚠️ Format angka NJKB tidak valid. Contoh: 15,000,000 atau 15.000.000")
+        st.stop()
+
+    if njkb <= 0:
+        st.error("⚠️ Nilai NJKB harus lebih besar dari 0.")
+        st.stop()
+
+    if tarif_pajak < 0:
+        st.error("⚠️ Tarif pajak tidak boleh negatif.")
+        st.stop()
+
     if not merk_kendaraan or not tipe_kendaraan:
         st.warning("⚠️ Merk dan tipe kendaraan sebaiknya diisi untuk identifikasi laporan.")
-    # Hitung usia kendaraan
-    from datetime import datetime
-    tahun_now = datetime.now().year
-    usia = tahun_now - tahun
-    #usia = 2025 - tahun
 
-    # Faktor usia jika dipilih
+    # -------------------------------
+    # Hitung usia kendaraan
+    # -------------------------------
+
+    usia = tahun_sekarang - tahun
+
+    # -------------------------------
+    # Faktor usia
+    # -------------------------------
+
     if use_fusia == "Ya, gunakan faktor usia":
         if usia < 10:
             faktor_usia = 1
         elif 10 <= usia <= 20:
             faktor_usia = 1.5
-        else:  # usia > 20
+        else:
             faktor_usia = 2
     else:
-        faktor_usia = 1  # dianggap tidak mempengaruhi
+        faktor_usia = 1
 
-    # 1. DP PKB
+    # -------------------------------
+    # DP PKB
+    # -------------------------------
+
     dp_pkb = njkb * (tarif_pajak / 100)
 
-    # 2. KD
-    kd = nilai_KD[jenis]
+    # -------------------------------
+    # KD berdasarkan klasifikasi
+    # -------------------------------
 
-    # 3. Rasio Emisi
-    if kategori == "Diesel":
-        baku = baku_mutu["Diesel"][periode]
-        rasio_emisi = hasil_emisi["Opasitas"] / baku
+    kd = nilai_KD[klasifikasi]
+
+    # -------------------------------
+    # Ambil baku mutu
+    # -------------------------------
+
+    baku, periode_baku, kategori_baku, metode_uji = ambil_baku_mutu(
+        bahan_bakar=bahan_bakar,
+        klasifikasi=klasifikasi,
+        tahun=tahun,
+        tipe_motor=tipe_motor,
+        jbb=jbb
+    )
+
+    if baku is None:
+        st.error("⚠️ Baku mutu tidak ditemukan untuk kombinasi input ini.")
+        st.stop()
+
+    # -------------------------------
+    # Hitung rasio emisi
+    # -------------------------------
+
+    if bahan_bakar == "Diesel":
+        baku_opasitas = baku
+        baku_co = None
+        baku_hc = None
+
+        rasio_emisi = hasil_emisi["Opasitas"] / baku_opasitas
+        parameter_dominan = "Opasitas"
+
     else:
-        baku = baku_mutu[kategori][periode]
-        rasio_co = hasil_emisi["CO"] / baku["CO"]
-        rasio_hc = hasil_emisi["HC"] / baku["HC"]
+        baku_co = baku["CO"]
+        baku_hc = baku["HC"]
+        baku_opasitas = None
+
+        rasio_co = hasil_emisi["CO"] / baku_co
+        rasio_hc = hasil_emisi["HC"] / baku_hc
+
         rasio_emisi = max(rasio_co, rasio_hc)
 
-    # 4. Tentukan KE dan status
+        if rasio_co >= rasio_hc:
+            parameter_dominan = "CO"
+        else:
+            parameter_dominan = "HC"
+
+    # -------------------------------
+    # Hitung KE dan status emisi
+    # -------------------------------
+
     if rasio_emisi <= 1:
         ke = 0
         status_emisi = "✅ LULUS — Emisi di bawah atau sama dengan baku mutu"
+        status_plain = "LULUS - Emisi di bawah atau sama dengan baku mutu"
     else:
         ke = alfa * (rasio_emisi - 1) * faktor_usia
         status_emisi = "⚠️ TIDAK LULUS — Emisi melebihi ambang batas"
+        status_plain = "TIDAK LULUS - Emisi melebihi ambang batas"
 
-    # 5. PKB Dasar
+    # -------------------------------
+    # Hitung PKB
+    # -------------------------------
+
     pkb_dasar = dp_pkb * kd
-
-    # 6. PKB Emisi
     pkb_emisi = dp_pkb * (kd + ke)
-
-    # 7. Selisih
     selisih = pkb_emisi - pkb_dasar
     persen_kenaikan = (selisih / pkb_dasar * 100) if pkb_dasar > 0 else 0
 
-    # -------------------------------
-    # Hasil Simulasi
-    # -------------------------------
+    # ===============================
+    # HASIL SIMULASI
+    # ===============================
+
     st.subheader("📊 Hasil Simulasi PKB")
+
+    st.write(f"**Bahan Bakar/Jenis Mesin:** {bahan_bakar}")
+    st.write(f"**Klasifikasi Kendaraan:** {klasifikasi}")
+
+    if tipe_motor:
+        st.write(f"**Tipe Sepeda Motor:** {tipe_motor}")
+
+    if jbb:
+        st.write(f"**JBB:** {jbb}")
+
+    st.write(f"**Periode Baku Mutu:** {periode_baku}")
+    st.write(f"**Kategori Baku Mutu:** {kategori_baku}")
+    st.write(f"**Metode Uji:** {metode_uji}")
     st.write(f"**Usia Kendaraan:** {usia} tahun")
-    st.write(f"**Faktor Usia Dipakai?** {'Ya' if use_fusia=='Ya, gunakan faktor usia' else 'Tidak'}")
+    st.write(f"**Faktor Usia Dipakai?** {'Ya' if use_fusia == 'Ya, gunakan faktor usia' else 'Tidak'}")
     st.write(f"**Nilai Faktor Usia:** {faktor_usia}")
-    st.write(f"**Rasio Emisi:** {rasio_emisi:.3f}")
+
+    if bahan_bakar == "Diesel":
+        st.write(f"**Baku Mutu Opasitas:** {baku_opasitas} % HSU")
+        st.write(f"**Rasio Opasitas:** {rasio_emisi:.3f}")
+    else:
+        st.write(f"**Baku Mutu CO:** {baku_co} %")
+        st.write(f"**Baku Mutu HC:** {baku_hc} ppm")
+        st.write(f"**Rasio CO:** {rasio_co:.3f}")
+        st.write(f"**Rasio HC:** {rasio_hc:.3f}")
+
+    st.write(f"**Parameter Dominan:** {parameter_dominan}")
+    st.write(f"**Rasio Emisi Final:** {rasio_emisi:.3f}")
     st.write(f"**Koefisien Emisi (KE):** {ke:.4f}")
     st.info(status_emisi)
+
     st.write("---")
 
     warna = "normal" if rasio_emisi <= 1 else "inverse"
 
     col1, col2, col3 = st.columns(3)
-    col1.metric("PKB Dasar (Rp)", f"{pkb_dasar:,.0f}")
-    col2.metric("PKB Emisi (Rp)", f"{pkb_emisi:,.0f}", f"{persen_kenaikan:.2f}%", delta_color=warna)
-    col3.metric("Selisih (Rp)", f"{selisih:,.0f}")
+
+    col1.metric(
+        "PKB Dasar (Rp)",
+        f"{pkb_dasar:,.0f}"
+    )
+
+    col2.metric(
+        "PKB Emisi (Rp)",
+        f"{pkb_emisi:,.0f}",
+        f"{persen_kenaikan:.2f}%",
+        delta_color=warna
+    )
+
+    col3.metric(
+        "Selisih (Rp)",
+        f"{selisih:,.0f}"
+    )
 
     st.write("---")
+
     st.caption("""
     🧮 Rumus:
     - DP PKB = NJKB × Tarif Pajak Daerah  
@@ -330,26 +708,42 @@ if st.button("🔍 Simulasikan PKB Emisi"):
     - KE = α × (Rasio Emisi − 1) × Faktor Usia  
     """)
 
+    # Simpan hasil ke session state untuk PDF
     st.session_state.hasil_simulasi = {
-    "jenis": jenis,
-    "merk": merk_kendaraan,
-    "tipe": tipe_kendaraan,
-    "tahun": tahun,
-    "usia": usia,
-    "kategori": kategori,
-    "hasil_emisi": hasil_emisi,
-    "njkb": njkb,
-    "tarif": tarif_pajak,
-    "kd": kd,
-    "alfa": alfa,
-    "faktor_usia": faktor_usia,
-    "rasio": rasio_emisi,
-    "ke": ke,
-    "status": status_emisi,
-    "pkb_dasar": pkb_dasar,
-    "pkb_emisi": pkb_emisi,
-    "selisih": selisih
+        "bahan_bakar": bahan_bakar,
+        "klasifikasi": klasifikasi,
+        "merk": merk_kendaraan,
+        "tipe": tipe_kendaraan,
+        "tahun": tahun,
+        "usia": usia,
+        "tipe_motor": tipe_motor,
+        "jbb": jbb,
+        "hasil_emisi": hasil_emisi,
+        "njkb": njkb,
+        "tarif": tarif_pajak,
+        "kd": kd,
+        "alfa": alfa,
+        "faktor_usia": faktor_usia,
+        "periode_baku": periode_baku,
+        "kategori_baku": kategori_baku,
+        "metode_uji": metode_uji,
+        "baku_co": baku_co,
+        "baku_hc": baku_hc,
+        "baku_opasitas": baku_opasitas,
+        "rasio": rasio_emisi,
+        "ke": ke,
+        "status": status_emisi,
+        "status_plain": status_plain,
+        "pkb_dasar": pkb_dasar,
+        "pkb_emisi": pkb_emisi,
+        "selisih": selisih,
+        "persen_kenaikan": persen_kenaikan
     }
+
+# ===============================
+# DOWNLOAD PDF
+# ===============================
+
 if "hasil_simulasi" in st.session_state:
     pdf_bytes = generate_pdf_bytes(st.session_state.hasil_simulasi)
 
@@ -359,16 +753,17 @@ if "hasil_simulasi" in st.session_state:
         file_name=f"Simulasi_PKB_Emisi_{datetime.now().strftime('%Y%m%d_%H%M%S')}.pdf",
         mime="application/pdf"
     )
+
 # ===============================
-# CHATBOT CHATGPT (GPT-4.1-mini)
+# CHATBOT CHATGPT
 # ===============================
+
 st.markdown("---")
 st.subheader("💬 Asisten Pajak Emisi")
 
 if "chat_history" not in st.session_state:
     st.session_state.chat_history = []
 
-# tampilkan histori chat
 for role, msg in st.session_state.chat_history:
     with st.chat_message(role):
         st.markdown(msg)
@@ -383,24 +778,32 @@ if user_msg:
     with st.chat_message("assistant"):
         with st.spinner("🤖 Menganalisis regulasi dan laporan..."):
             try:
+                system_prompt = (
+                    "Anda adalah asisten ahli pajak emisi kendaraan bermotor Indonesia. "
+                    "Gunakan bahasa formal kebijakan publik. "
+                    "Jawaban harus relevan dengan regulasi Indonesia, baku mutu emisi, "
+                    "dan simulasi pajak emisi kendaraan bermotor."
+                )
+
+                if laporan_text:
+                    system_prompt += (
+                        "\n\nGunakan juga konteks laporan berikut sebagai dasar jawaban:\n\n"
+                        f"{laporan_text[:30000]}"
+                    )
+
                 response = client.chat.completions.create(
-                    model=MODEL_LLM,  # "gpt-4.1-mini"
+                    model=MODEL_LLM,
                     messages=[
                         {
                             "role": "system",
-                            "content": (
-                                "Anda adalah asisten ahli pajak emisi kendaraan bermotor Indonesia. "
-                                "Gunakan bahasa formal kebijakan publik. "
-                                "Jawaban HARUS berdasarkan regulasi Indonesia dan laporan berikut.\n\n"
-                                f"{laporan_text[:30000]}"
-                            )
+                            "content": system_prompt
                         }
                     ] + [
                         {"role": r, "content": m}
-                        for r, m in st.session_state.chat_history[-6:]  # history aman diperpanjang
+                        for r, m in st.session_state.chat_history[-6:]
                     ],
-                    max_tokens=700,      # ✅ PARAMETER GPT-4
-                    temperature=0.1     # ✅ BOLEH di GPT-4
+                    max_tokens=700,
+                    temperature=0.1
                 )
 
                 answer = response.choices[0].message.content.strip()
@@ -409,47 +812,4 @@ if user_msg:
 
             except Exception as e:
                 st.error(f"⚠️ Terjadi error ChatGPT: {e}")
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+```
