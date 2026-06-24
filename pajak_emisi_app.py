@@ -1,4 +1,3 @@
-```python
 # ==========================================
 # Aplikasi Simulasi Pajak Emisi Kendaraan Bermotor
 # Berdasarkan Permendagri No. 7 Tahun 2025
@@ -812,4 +811,3 @@ if user_msg:
 
             except Exception as e:
                 st.error(f"⚠️ Terjadi error ChatGPT: {e}")
-```
