@@ -485,28 +485,6 @@ def generate_pdf_bytes(data):
 st.title("🚗 Aplikasi Pajak Emisi Kendaraan Bermotor")
 st.caption("Berdasarkan **Permendagri No. 7 Tahun 2025** dan **PERMEN LHK No. 8 Tahun 2023**")
 
-# ===============================
-# SCROLL KE PALING ATAS SAAT APP PERTAMA DIBUKA
-# ===============================
-
-if "scroll_top_done" not in st.session_state:
-    st.session_state.scroll_top_done = True
-
-    components.html(
-        """
-        <script>
-            setTimeout(function() {
-                window.parent.scrollTo({
-                    top: 0,
-                    left: 0,
-                    behavior: "auto"
-                });
-            }, 100);
-        </script>
-        """,
-        height=0
-    )
-
 # -------------------------------
 # 1. Pemilihan Bahan Bakar / Jenis Mesin
 # -------------------------------
@@ -1060,3 +1038,25 @@ if user_msg:
 
             except Exception as e:
                 st.error(f"⚠️ Terjadi error ChatGPT: {e}")
+
+# ===============================
+# SCROLL KE PALING ATAS SAAT APP PERTAMA DIBUKA
+# ===============================
+
+if "scroll_top_done" not in st.session_state:
+    st.session_state.scroll_top_done = True
+
+    components.html(
+        """
+        <script>
+            setTimeout(function() {
+                window.parent.scrollTo({
+                    top: 0,
+                    left: 0,
+                    behavior: "auto"
+                });
+            }, 100);
+        </script>
+        """,
+        height=0
+    )
