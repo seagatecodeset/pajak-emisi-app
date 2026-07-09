@@ -1,3 +1,4 @@
+```python
 # ==========================================
 # Aplikasi Simulasi Pajak Emisi Kendaraan Bermotor
 # Berdasarkan Permendagri No. 7 Tahun 2025
@@ -47,7 +48,10 @@ try:
     laporan_text = load_pdf_text("ringkasa_laporan.pdf")
 except Exception:
     laporan_text = ""
-    st.warning("⚠️ File ringkasa_laporan.pdf tidak ditemukan atau belum dapat dibaca. Chatbot tetap berjalan, tetapi tanpa konteks laporan PDF.")
+    st.warning(
+        "⚠️ File ringkasa_laporan.pdf tidak ditemukan atau belum dapat dibaca. "
+        "Chatbot tetap berjalan, tetapi tanpa konteks laporan PDF."
+    )
 
 # ===============================
 # DATA BAKU MUTU EMISI
@@ -105,6 +109,92 @@ baku_mutu_diesel = {
         "<2010": 65,
         "2010–2021": 40,
         ">2021": 35
+    }
+}
+
+# ===============================
+# BATAS RASIO MAKSIMUM DAN DEFAULT ALFA
+# ===============================
+# Jika kombinasi bahan bakar + klasifikasi + periode tahun ada di tabel ini:
+# - Rasio emisi dibatasi maksimum sesuai Rasio Max
+# - Nilai alfa otomatis terisi default sesuai tabel
+#
+# Jika kombinasi tidak ada:
+# - Rasio tidak dibatasi
+# - Alfa tetap diisi manual oleh user
+
+rasio_alfa_rules = {
+    ("Bensin", "A", "<2007"): {
+        "rasio_max": 3.798181818,
+        "alfa": 0.054
+    },
+    ("Bensin", "A", "2007–2018"): {
+        "rasio_max": 2.95625,
+        "alfa": 0.054
+    },
+    ("Bensin", "A", ">2018"): {
+        "rasio_max": 4.033333333,
+        "alfa": 0.064
+    },
+    ("Bensin", "B", "<2007"): {
+        "rasio_max": 2.678916667,
+        "alfa": 0.047
+    },
+    ("Bensin", "B", "2007–2018"): {
+        "rasio_max": 3.908,
+        "alfa": 0.052
+    },
+    ("Bensin", "B", ">2018"): {
+        "rasio_max": 2.08,
+        "alfa": 0.111
+    },
+    ("Bensin", "C", "<2007"): {
+        "rasio_max": 2.49925,
+        "alfa": 0.043
+    },
+    ("Bensin", "C", "2007–2018"): {
+        "rasio_max": 5.234,
+        "alfa": 0.21
+    },
+    ("Bensin", "C", ">2018"): {
+        "rasio_max": 3.364,
+        "alfa": 0.053
+    },
+    ("Bensin", "D", "<2007"): {
+        "rasio_max": 3.122458333,
+        "alfa": 0.043
+    },
+    ("Bensin", "D", "2007–2018"): {
+        "rasio_max": 4.922,
+        "alfa": 0.21
+    },
+    ("Bensin", "D", ">2018"): {
+        "rasio_max": 2.322,
+        "alfa": 0.053
+    },
+    ("Diesel", "C", "<2010"): {
+        "rasio_max": 1.536307692,
+        "alfa": 0.84
+    },
+    ("Diesel", "C", "2010–2021"): {
+        "rasio_max": 2.46,
+        "alfa": 0.84
+    },
+    ("Diesel", "C", ">2021"): {
+        "rasio_max": 1.731666667,
+        "alfa": 0.056
+    },
+    ("Diesel", "D", "<2010"): {
+        "rasio_max": 1.698576923,
+        "alfa": 0.84
+    },
+    ("Diesel", "D", "2010–2021"): {
+        "rasio_max": 2.42725,
+        "alfa": 0.84
+    },
+    ("Diesel", "D", ">2021"): {
+        "rasio_max": 2.773333333,
+        "alfa": 0.056
     }
 }
 
@@ -174,6 +264,44 @@ def tentukan_periode_diesel(tahun):
         return "2010–2021"
     else:
         return ">2021"
+
+
+def tentukan_periode_rasio_alfa(bahan_bakar, tahun):
+    """
+    Periode khusus untuk tabel rasio maksimum dan nilai alfa.
+    Bensin menggunakan:
+    - <2007
+    - 2007–2018
+    - >2018
+
+    Diesel menggunakan:
+    - <2010
+    - 2010–2021
+    - >2021
+    """
+    if bahan_bakar == "Bensin":
+        if tahun < 2007:
+            return "<2007"
+        elif tahun <= 2018:
+            return "2007–2018"
+        else:
+            return ">2018"
+
+    if bahan_bakar == "Diesel":
+        if tahun < 2010:
+            return "<2010"
+        elif tahun <= 2021:
+            return "2010–2021"
+        else:
+            return ">2021"
+
+    return None
+
+
+def ambil_rule_rasio_alfa(bahan_bakar, klasifikasi, tahun):
+    periode_rule = tentukan_periode_rasio_alfa(bahan_bakar, tahun)
+    rule = rasio_alfa_rules.get((bahan_bakar, klasifikasi, periode_rule))
+    return rule, periode_rule
 
 
 def ambil_baku_mutu(bahan_bakar, klasifikasi, tahun, tipe_motor=None, jbb=None):
@@ -312,10 +440,19 @@ def generate_pdf_bytes(data):
     draw(f"Tarif Pajak Daerah            : {data['tarif']} %")
     draw(f"KD                            : {data['kd']}")
     draw(f"Nilai Alfa (α)                : {data['alfa']}")
+    draw(f"Sumber Alfa                   : {data['sumber_alfa']}")
     draw(f"Faktor Usia                   : {data['faktor_usia']}")
     y -= 10
 
-    draw(f"Rasio Emisi                   : {data['rasio']:.3f}")
+    draw(f"Rasio Emisi Awal              : {data['rasio_awal']:.3f}")
+
+    if data.get("rasio_max") is not None:
+        draw(f"Rasio Maksimum                : {data['rasio_max']:.3f}")
+        draw(f"Rasio Dipakai untuk KE        : {data['rasio']:.3f}")
+    else:
+        draw("Rasio Maksimum                : Tidak dibatasi")
+        draw(f"Rasio Dipakai untuk KE        : {data['rasio']:.3f}")
+
     draw(f"Koefisien Emisi (KE)          : {data['ke']:.4f}")
     draw(f"Status Emisi                  : {data['status_plain']}")
     y -= 10
@@ -333,6 +470,7 @@ def generate_pdf_bytes(data):
     draw("PKB Dasar = DP PKB x KD")
     draw("PKB Emisi = DP PKB x (KD + KE)")
     draw("KE = α x (Rasio Emisi - 1) x Faktor Usia")
+    draw("Jika tersedia dalam tabel, Rasio Emisi untuk KE dibatasi sampai Rasio Maksimum.")
 
     c.showPage()
     c.save()
@@ -466,15 +604,48 @@ else:
     }
 
 # -------------------------------
-# 7. Nilai Alfa
+# 7. Nilai Alfa dan Batas Rasio
 # -------------------------------
 
 st.markdown("### ⚙️ Pengaturan Lanjutan")
 
-alfa_input = st.text_input(
-    "Nilai Alfa (α):",
-    placeholder="Contoh: 0.2"
+rule_rasio_alfa, periode_rule = ambil_rule_rasio_alfa(
+    bahan_bakar=bahan_bakar,
+    klasifikasi=klasifikasi,
+    tahun=tahun
 )
+
+if rule_rasio_alfa is not None:
+    rasio_max_default = rule_rasio_alfa["rasio_max"]
+    alfa_default = rule_rasio_alfa["alfa"]
+
+    st.info(
+        f"Kombinasi **{bahan_bakar} - Klasifikasi {klasifikasi} - Tahun {periode_rule}** "
+        f"tersedia dalam tabel. Rasio emisi maksimum = **{rasio_max_default:.3f}**, "
+        f"dan nilai alfa default = **{alfa_default}**."
+    )
+
+    alfa_input = st.text_input(
+        "Nilai Alfa (α):",
+        value=str(alfa_default),
+        key=f"alfa_{bahan_bakar}_{klasifikasi}_{periode_rule}"
+    )
+
+else:
+    rasio_max_default = None
+    alfa_default = None
+
+    st.warning(
+        f"Kombinasi **{bahan_bakar} - Klasifikasi {klasifikasi} - Tahun {periode_rule}** "
+        "belum tersedia dalam tabel rasio maksimum dan alfa. "
+        "Rasio emisi tidak dibatasi dan nilai alfa harus diisi manual."
+    )
+
+    alfa_input = st.text_input(
+        "Nilai Alfa (α):",
+        placeholder="Contoh: 0.2",
+        key=f"alfa_manual_{bahan_bakar}_{klasifikasi}_{periode_rule}"
+    )
 
 use_fusia = st.radio(
     "Gunakan Faktor Usia dalam Perhitungan KE?",
@@ -590,7 +761,24 @@ if st.button("🔍 Simulasikan PKB Emisi"):
         st.stop()
 
     # -------------------------------
-    # Hitung rasio emisi
+    # Ambil rule rasio maksimum dan alfa
+    # -------------------------------
+
+    rule_rasio_alfa, periode_rule = ambil_rule_rasio_alfa(
+        bahan_bakar=bahan_bakar,
+        klasifikasi=klasifikasi,
+        tahun=tahun
+    )
+
+    if rule_rasio_alfa is not None:
+        rasio_max = rule_rasio_alfa["rasio_max"]
+        sumber_alfa = "Default tabel rasio maksimum dan alfa"
+    else:
+        rasio_max = None
+        sumber_alfa = "Input manual user"
+
+    # -------------------------------
+    # Hitung rasio emisi awal
     # -------------------------------
 
     if bahan_bakar == "Diesel":
@@ -598,7 +786,7 @@ if st.button("🔍 Simulasikan PKB Emisi"):
         baku_co = None
         baku_hc = None
 
-        rasio_emisi = hasil_emisi["Opasitas"] / baku_opasitas
+        rasio_emisi_awal = hasil_emisi["Opasitas"] / baku_opasitas
         parameter_dominan = "Opasitas"
 
     else:
@@ -609,7 +797,7 @@ if st.button("🔍 Simulasikan PKB Emisi"):
         rasio_co = hasil_emisi["CO"] / baku_co
         rasio_hc = hasil_emisi["HC"] / baku_hc
 
-        rasio_emisi = max(rasio_co, rasio_hc)
+        rasio_emisi_awal = max(rasio_co, rasio_hc)
 
         if rasio_co >= rasio_hc:
             parameter_dominan = "CO"
@@ -617,10 +805,23 @@ if st.button("🔍 Simulasikan PKB Emisi"):
             parameter_dominan = "HC"
 
     # -------------------------------
+    # Terapkan batas rasio maksimum
+    # -------------------------------
+    # Jika kombinasi ada dalam tabel, rasio yang dipakai untuk KE dibatasi.
+    # Jika tidak ada dalam tabel, rasio dipakai apa adanya.
+
+    if rasio_max is not None:
+        rasio_emisi = min(rasio_emisi_awal, rasio_max)
+        rasio_dibatasi = rasio_emisi_awal > rasio_max
+    else:
+        rasio_emisi = rasio_emisi_awal
+        rasio_dibatasi = False
+
+    # -------------------------------
     # Hitung KE dan status emisi
     # -------------------------------
 
-    if rasio_emisi <= 1:
+    if rasio_emisi_awal <= 1:
         ke = 0
         status_emisi = "✅ LULUS — Emisi di bawah atau sama dengan baku mutu"
         status_plain = "LULUS - Emisi di bawah atau sama dengan baku mutu"
@@ -655,6 +856,7 @@ if st.button("🔍 Simulasikan PKB Emisi"):
 
     st.write(f"**Periode Baku Mutu:** {periode_baku}")
     st.write(f"**Kategori Baku Mutu:** {kategori_baku}")
+    st.write(f"**Periode Tabel Rasio-Alfa:** {periode_rule}")
     st.write(f"**Metode Uji:** {metode_uji}")
     st.write(f"**Usia Kendaraan:** {usia} tahun")
     st.write(f"**Faktor Usia Dipakai?** {'Ya' if use_fusia == 'Ya, gunakan faktor usia' else 'Tidak'}")
@@ -662,7 +864,7 @@ if st.button("🔍 Simulasikan PKB Emisi"):
 
     if bahan_bakar == "Diesel":
         st.write(f"**Baku Mutu Opasitas:** {baku_opasitas} % HSU")
-        st.write(f"**Rasio Opasitas:** {rasio_emisi:.3f}")
+        st.write(f"**Rasio Opasitas Awal:** {rasio_emisi_awal:.3f}")
     else:
         st.write(f"**Baku Mutu CO:** {baku_co} %")
         st.write(f"**Baku Mutu HC:** {baku_hc} ppm")
@@ -670,13 +872,33 @@ if st.button("🔍 Simulasikan PKB Emisi"):
         st.write(f"**Rasio HC:** {rasio_hc:.3f}")
 
     st.write(f"**Parameter Dominan:** {parameter_dominan}")
-    st.write(f"**Rasio Emisi Final:** {rasio_emisi:.3f}")
+    st.write(f"**Rasio Emisi Awal:** {rasio_emisi_awal:.3f}")
+
+    if rasio_max is not None:
+        st.write(f"**Batas Rasio Maksimum:** {rasio_max:.3f}")
+        st.write(f"**Rasio Emisi yang Dipakai untuk KE:** {rasio_emisi:.3f}")
+
+        if rasio_dibatasi:
+            st.warning(
+                "⚠️ Rasio emisi awal melebihi batas maksimum tabel, "
+                "sehingga rasio yang dipakai dalam perhitungan KE dibatasi."
+            )
+        else:
+            st.success(
+                "✅ Rasio emisi awal masih berada di bawah atau sama dengan batas maksimum tabel."
+            )
+    else:
+        st.write("**Batas Rasio Maksimum:** Tidak ada / tidak dibatasi")
+        st.write(f"**Rasio Emisi yang Dipakai untuk KE:** {rasio_emisi:.3f}")
+
+    st.write(f"**Nilai Alfa (α):** {alfa}")
+    st.write(f"**Sumber Alfa:** {sumber_alfa}")
     st.write(f"**Koefisien Emisi (KE):** {ke:.4f}")
     st.info(status_emisi)
 
     st.write("---")
 
-    warna = "normal" if rasio_emisi <= 1 else "inverse"
+    warna = "normal" if rasio_emisi_awal <= 1 else "inverse"
 
     col1, col2, col3 = st.columns(3)
 
@@ -705,6 +927,7 @@ if st.button("🔍 Simulasikan PKB Emisi"):
     - PKB Dasar = DP PKB × KD  
     - PKB Emisi = DP PKB × (KD + KE)  
     - KE = α × (Rasio Emisi − 1) × Faktor Usia  
+    - Jika tersedia dalam tabel, Rasio Emisi untuk KE dibatasi sampai Rasio Maksimum  
     """)
 
     # Simpan hasil ke session state untuk PDF
@@ -722,6 +945,7 @@ if st.button("🔍 Simulasikan PKB Emisi"):
         "tarif": tarif_pajak,
         "kd": kd,
         "alfa": alfa,
+        "sumber_alfa": sumber_alfa,
         "faktor_usia": faktor_usia,
         "periode_baku": periode_baku,
         "kategori_baku": kategori_baku,
@@ -729,6 +953,8 @@ if st.button("🔍 Simulasikan PKB Emisi"):
         "baku_co": baku_co,
         "baku_hc": baku_hc,
         "baku_opasitas": baku_opasitas,
+        "rasio_awal": rasio_emisi_awal,
+        "rasio_max": rasio_max,
         "rasio": rasio_emisi,
         "ke": ke,
         "status": status_emisi,
@@ -811,3 +1037,4 @@ if user_msg:
 
             except Exception as e:
                 st.error(f"⚠️ Terjadi error ChatGPT: {e}")
+```
