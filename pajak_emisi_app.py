@@ -648,7 +648,8 @@ else:
 
 use_fusia = st.radio(
     "Gunakan Faktor Usia dalam Perhitungan KE?",
-    ("Ya, gunakan faktor usia", "Tidak, tanpa faktor usia")
+    ("Ya, gunakan faktor usia", "Tidak, tanpa faktor usia"),
+    index=1
 )
 
 # -------------------------------
