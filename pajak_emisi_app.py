@@ -926,7 +926,7 @@ if st.button("🔍 Simulasikan PKB Emisi"):
     - PKB Dasar = DP PKB × KD  
     - PKB Emisi = DP PKB × (KD + KE)  
     - KE = α × (Rasio Emisi − 1) × Faktor Usia  
-    - Jika tersedia dalam daftar usulab, Rasio Emisi untuk KE dibatasi sampai Rasio Maksimum  
+    - Jika tersedia dalam daftar usulan, Rasio Emisi untuk KE dibatasi sampai Rasio Maksimum  
     """)
 
     # Simpan hasil ke session state untuk PDF
