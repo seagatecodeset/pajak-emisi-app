@@ -469,7 +469,7 @@ def generate_pdf_bytes(data):
     draw("PKB Dasar = DP PKB x KD")
     draw("PKB Emisi = DP PKB x (KD + KE)")
     draw("KE = α x (Rasio Emisi - 1) x Faktor Usia")
-    draw("Jika tersedia dalam tabel, Rasio Emisi untuk KE dibatasi sampai Rasio Maksimum.")
+    draw("Jika tersedia dalam daftar usulan, Rasio Emisi untuk KE dibatasi sampai Rasio Maksimum.")
 
     c.showPage()
     c.save()
@@ -620,7 +620,7 @@ if rule_rasio_alfa is not None:
 
     st.info(
         f"Kombinasi **{bahan_bakar} - Klasifikasi {klasifikasi} - Tahun {periode_rule}** "
-        f"tersedia dalam tabel. Rasio emisi maksimum = **{rasio_max_default:.3f}**, "
+        f"tersedia dalam daftar usulan. Rasio emisi maksimum = **{rasio_max_default:.3f}**, "
         f"dan nilai alfa default = **{alfa_default}**."
     )
 
@@ -636,7 +636,7 @@ else:
 
     st.warning(
         f"Kombinasi **{bahan_bakar} - Klasifikasi {klasifikasi} - Tahun {periode_rule}** "
-        "belum tersedia dalam tabel rasio maksimum dan alfa. "
+        "belum tersedia dalam daftar usulan rasio maksimum dan alfa. "
         "Rasio emisi tidak dibatasi dan nilai alfa harus diisi manual."
     )
 
@@ -771,7 +771,7 @@ if st.button("🔍 Simulasikan PKB Emisi"):
 
     if rule_rasio_alfa is not None:
         rasio_max = rule_rasio_alfa["rasio_max"]
-        sumber_alfa = "Default tabel rasio maksimum dan alfa"
+        sumber_alfa = "Default usulan rasio maksimum dan alfa"
     else:
         rasio_max = None
         sumber_alfa = "Input manual user"
@@ -855,7 +855,7 @@ if st.button("🔍 Simulasikan PKB Emisi"):
 
     st.write(f"**Periode Baku Mutu:** {periode_baku}")
     st.write(f"**Kategori Baku Mutu:** {kategori_baku}")
-    st.write(f"**Periode Tabel Rasio-Alfa:** {periode_rule}")
+    st.write(f"**Periode Usulan Rasio-Alfa:** {periode_rule}")
     st.write(f"**Metode Uji:** {metode_uji}")
     st.write(f"**Usia Kendaraan:** {usia} tahun")
     st.write(f"**Faktor Usia Dipakai?** {'Ya' if use_fusia == 'Ya, gunakan faktor usia' else 'Tidak'}")
@@ -879,12 +879,12 @@ if st.button("🔍 Simulasikan PKB Emisi"):
 
         if rasio_dibatasi:
             st.warning(
-                "⚠️ Rasio emisi awal melebihi batas maksimum tabel, "
+                "⚠️ Rasio emisi awal melebihi batas maksimum daftar usulan, "
                 "sehingga rasio yang dipakai dalam perhitungan KE dibatasi."
             )
         else:
             st.success(
-                "✅ Rasio emisi awal masih berada di bawah atau sama dengan batas maksimum tabel."
+                "✅ Rasio emisi awal masih berada di bawah atau sama dengan batas maksimum daftar usulan."
             )
     else:
         st.write("**Batas Rasio Maksimum:** Tidak ada / tidak dibatasi")
@@ -926,7 +926,7 @@ if st.button("🔍 Simulasikan PKB Emisi"):
     - PKB Dasar = DP PKB × KD  
     - PKB Emisi = DP PKB × (KD + KE)  
     - KE = α × (Rasio Emisi − 1) × Faktor Usia  
-    - Jika tersedia dalam tabel, Rasio Emisi untuk KE dibatasi sampai Rasio Maksimum  
+    - Jika tersedia dalam daftar usulab, Rasio Emisi untuk KE dibatasi sampai Rasio Maksimum  
     """)
 
     # Simpan hasil ke session state untuk PDF
