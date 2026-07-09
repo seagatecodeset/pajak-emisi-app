@@ -13,7 +13,6 @@ from reportlab.lib.pagesizes import A4
 from reportlab.pdfgen import canvas
 from reportlab.lib.units import cm
 from io import BytesIO
-import streamlit.components.v1 as components
 
 # ===============================
 # KONFIGURASI LLM / CHATBOT
@@ -990,15 +989,22 @@ st.subheader("💬 Asisten Pajak Emisi")
 if "chat_history" not in st.session_state:
     st.session_state.chat_history = []
 
+# tampilkan histori chat
 for role, msg in st.session_state.chat_history:
     with st.chat_message(role):
         st.markdown(msg)
 
-user_msg = st.chat_input(
-    "Tanyakan seputar pajak emisi, baku mutu, atau regulasi kendaraan"
-)
+# Gunakan form biasa, bukan st.chat_input
+with st.form("chatbot_form", clear_on_submit=True):
+    user_msg = st.text_area(
+        "Tanyakan seputar pajak emisi, baku mutu, atau regulasi kendaraan:",
+        placeholder="Contoh: Bagaimana cara menghitung PKB emisi?",
+        height=100
+    )
 
-if user_msg:
+    submit_chat = st.form_submit_button("Kirim Pertanyaan")
+
+if submit_chat and user_msg.strip():
     st.session_state.chat_history.append(("user", user_msg))
 
     with st.chat_message("assistant"):
@@ -1038,25 +1044,3 @@ if user_msg:
 
             except Exception as e:
                 st.error(f"⚠️ Terjadi error ChatGPT: {e}")
-
-# ===============================
-# SCROLL KE PALING ATAS SAAT APP PERTAMA DIBUKA
-# ===============================
-
-if "scroll_top_done" not in st.session_state:
-    st.session_state.scroll_top_done = True
-
-    components.html(
-        """
-        <script>
-            setTimeout(function() {
-                window.parent.scrollTo({
-                    top: 0,
-                    left: 0,
-                    behavior: "auto"
-                });
-            }, 100);
-        </script>
-        """,
-        height=0
-    )
