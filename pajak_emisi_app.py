@@ -883,10 +883,10 @@ if st.button("🔍 Simulasikan PKB Emisi"):
                 "⚠️ Rasio emisi awal melebihi batas maksimum daftar usulan, "
                 "sehingga rasio yang dipakai dalam perhitungan KE dibatasi."
             )
-        else:
-            st.success(
-                "✅ Rasio emisi awal masih berada di bawah atau sama dengan batas maksimum daftar usulan."
-            )
+#        else:
+#            st.success(
+#                "✅ Rasio emisi awal masih berada di bawah atau sama dengan batas maksimum daftar usulan."
+#           )
     else:
         st.write("**Batas Rasio Maksimum:** Tidak ada / tidak dibatasi")
         st.write(f"**Rasio Emisi yang Dipakai untuk KE:** {rasio_emisi:.3f}")
