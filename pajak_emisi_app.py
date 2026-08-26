@@ -971,7 +971,10 @@ if st.button("🔍 Simulasikan PKB Emisi"):
         st.write("**Batas KE Maksimum:** Tidak ada / tidak dibatasi")
         st.write(f"**Koefisien Emisi (KE):** {ke:.6f}")
 
-    st.info(status_emisi)
+    if rasio_emisi_awal <= 1:
+        st.success(status_emisi)
+    else:
+        st.error(status_emisi)
 
     st.write("---")
 
